@@ -4,23 +4,48 @@ import styled from 'styled-components';
 import logo from '../images/logo.png';
 
 class GraphMap extends Component {
-  state = {};
+  state = { progress: 0 };
+
+  getLocation = async () => {
+    try {
+      const response = await axios({
+        method: 'get',
+        url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/init/',
+        headers: {
+          Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+        }
+      });
+      console.log(response.data);
+    } catch (error) {
+      console.log('There was an error.');
+    }
+  };
+
+  handleClick = () => {
+    this.getLocation();
+  };
   render() {
+    const { progress } = this.state;
     return (
       <StyledGraphMap>
-        <button className="btn">
+        <button className="btn" onClick={this.handleClick}>
           <img src={logo} alt="Jolly Roger" />
           Generate Map
         </button>
         <div className="progress-bar-container">
           <div className="progress-bar">
             <div
-              style={{ width: '50%', height: '100%', background: '#7dcdbe' }}
+              style={{
+                width: `${progress}%`,
+                height: '100%',
+                background: '#7dcdbe',
+                transition: 'width .2s ease-in-out'
+              }}
               className="progress-bar-fill"
             />
           </div>
           <div className="progress-bar-text">
-            <span>GENERATING...</span> <span>50%</span>
+            <span>GENERATING...</span> <span>{progress}%</span>
           </div>
         </div>
       </StyledGraphMap>
@@ -56,9 +81,11 @@ const StyledGraphMap = styled.div`
       width: 33px;
       margin-right: 2rem;
     }
-    &:hover {
+    &:hover,
+    &:focus {
       color: #7dcdbe;
       background: #3b3f3f;
+      outline: none;
     }
   }
 
@@ -70,6 +97,7 @@ const StyledGraphMap = styled.div`
       border-radius: 10px;
       border: 2px solid #7dcdbe;
       background: #f5f5f5;
+      overflow: hidden;
     }
     .progress-bar-text {
       margin-top: 0.5rem;
