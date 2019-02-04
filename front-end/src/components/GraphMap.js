@@ -5,21 +5,100 @@ import logo from '../images/logo.png';
 
 class GraphMap extends Component {
   state = {
-    generating: false,
-    progress: 0,
-    room_id: 0,
-    message: '',
+    coords: { x: 50, y: 60 },
     error: '',
-    coords: { x: 60, y: 60 },
+    exits: [],
+    generating: false,
     graph: {},
-    path: []
+    message: '',
+    path: [],
+    progress: 0,
+    room_id: 0
   };
 
-  traverseMap = () => {
-    const { graph, path } = this.state;
-
-    //   GET CURRENT LOCATION
+  componentDidMount() {
+    // GET CURRENT LOCATION
     this.getLocation();
+  }
+
+  traverseMap = () => {
+    let { coords, exits, graph, path, room_id } = this.state;
+    const inverse = { n: 's', s: 'n', w: 'e', e: 'w' };
+    // START
+    this.setState({ generating: true });
+    // INIT GRAPH
+    const traveralGraph = {};
+    const traveralPath = [];
+    // INIT THE FIRST ROOM
+    if (!graph[room_id]) {
+      traveralGraph[room_id] = [];
+      traveralGraph[room_id].push(coords);
+      const moves = {};
+      exits.forEach(exit => {
+        moves[exit] = '?';
+      });
+      traveralGraph[room_id].push(moves);
+    }
+    // STARTING HERE LOOP
+    const interval = setInterval(() => {
+      const unknownRooms = [];
+      const directions = traveralGraph[room_id][1];
+      for (let direction in directions) {
+        if (directions[direction] === '?') {
+          unknownRooms.push(direction);
+        }
+      }
+      if (unknownRooms) {
+        const move = unknownRooms[0];
+        traveralPath.push(move);
+        let previous_room_id = room_id;
+        // MAKE POST REQUEST
+        this.moveRooms(move).then(() => {
+          room_id = this.state.room_id;
+          coords = this.state.coords;
+          if (!graph[room_id]) {
+            traveralGraph[room_id] = [];
+            traveralGraph[room_id].push(coords);
+            const moves = {};
+            exits.forEach(exit => {
+              moves[exit] = '?';
+            });
+            traveralGraph[room_id].push(moves);
+          }
+          traveralGraph[previous_room_id][1][move] = room_id;
+          traveralGraph[room_id][1][inverse[move]] = previous_room_id;
+          console.log(traveralGraph);
+        });
+      } else {
+        // do something here
+        console.log('We made it here!');
+      }
+    }, 1000 * 25);
+
+    console.log(traveralGraph);
+  };
+
+  moveRooms = async move => {
+    try {
+      const response = await axios({
+        method: 'post',
+        url: `https://lambda-treasure-hunt.herokuapp.com/api/adv/move/`,
+        headers: {
+          Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+        },
+        data: {
+          direction: move
+        }
+      });
+      this.setState({
+        room_id: response.data.room_id,
+        coords: this.parseCoords(response.data.coordinates),
+        exits: [...response.data.exits]
+      });
+      console.log(response.data);
+    } catch (error) {
+      console.log('Something went wrong moving...');
+    }
   };
 
   getLocation = async () => {
@@ -32,11 +111,11 @@ class GraphMap extends Component {
         }
       });
       this.setState({
-        generating: true,
         room_id: response.data.room_id,
-        coords: this.parseCoords(response.data.coordinates)
+        coords: this.parseCoords(response.data.coordinates),
+        exits: [...response.data.exits]
       });
-      console.log(response.data);
+      //   console.log(response.data);
     } catch (error) {
       console.log('There was an error.');
     }
@@ -45,17 +124,18 @@ class GraphMap extends Component {
   parseCoords = coords => {
     const coordsObject = {};
     const coordsArr = coords.replace(/[{()}]/g, '').split(',');
-    console.log(coordsArr);
+
     coordsArr.forEach(coord => {
       coordsObject['x'] = parseInt(coordsArr[0]);
       coordsObject['y'] = parseInt(coordsArr[1]);
     });
-    console.log(coordsObject);
+
     return coordsObject;
   };
 
   handleClick = () => {
-    this.getLocation();
+    // this.traverseMap();
+    this.moveRooms('s');
   };
   render() {
     const {
