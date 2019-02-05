@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import axios from 'axios';
 import styled from 'styled-components';
 import logo from '../images/logo.png';
+import { isNull } from 'util';
 
 class GraphMap extends Component {
   state = {
@@ -10,6 +11,7 @@ class GraphMap extends Component {
     exits: [],
     generating: false,
     graph: {},
+    inverse: { n: 's', s: 'n', w: 'e', e: 'w' },
     message: '',
     path: [],
     progress: 0,
@@ -18,64 +20,33 @@ class GraphMap extends Component {
 
   componentDidMount() {
     // GET CURRENT LOCATION
+    // if graph in local storage update state
+    if (localStorage.hasOwnProperty('graph')) {
+      let value = JSON.parse(localStorage.getItem('graph'));
+      this.setState({ graph: value });
+    }
     this.getLocation();
   }
 
   traverseMap = () => {
-    let { coords, exits, graph, path, room_id } = this.state;
-    const inverse = { n: 's', s: 'n', w: 'e', e: 'w' };
-    // START
-    this.setState({ generating: true });
-    // INIT GRAPH
-    const traveralGraph = {};
-    const traveralPath = [];
-    // INIT THE FIRST ROOM
-    if (!graph[room_id]) {
-      traveralGraph[room_id] = [];
-      traveralGraph[room_id].push(coords);
-      const moves = {};
-      exits.forEach(exit => {
-        moves[exit] = '?';
-      });
-      traveralGraph[room_id].push(moves);
-    }
-    // STARTING HERE LOOP
-    const interval = setInterval(() => {
-      const unknownRooms = [];
-      const directions = traveralGraph[room_id][1];
-      for (let direction in directions) {
-        if (directions[direction] === '?') {
-          unknownRooms.push(direction);
-        }
-      }
-      if (unknownRooms) {
-        const move = unknownRooms[0];
-        traveralPath.push(move);
-        let previous_room_id = room_id;
-        // MAKE POST REQUEST
-        this.moveRooms(move).then(() => {
-          room_id = this.state.room_id;
-          coords = this.state.coords;
-          if (!graph[room_id]) {
-            traveralGraph[room_id] = [];
-            traveralGraph[room_id].push(coords);
-            const moves = {};
-            exits.forEach(exit => {
-              moves[exit] = '?';
-            });
-            traveralGraph[room_id].push(moves);
-          }
-          traveralGraph[previous_room_id][1][move] = room_id;
-          traveralGraph[room_id][1][inverse[move]] = previous_room_id;
-          console.log(traveralGraph);
-        });
-      } else {
-        // do something here
-        console.log('We made it here!');
-      }
-    }, 1000 * 25);
+    let unknonwnDirections = this.getUnknownDirections();
 
-    console.log(traveralGraph);
+    if (unknonwnDirections.length) {
+      let move = unknonwnDirections[0];
+      this.moveRooms(move);
+    }
+  };
+
+  getUnknownDirections = () => {
+    let unknownDirections = [];
+    let directions = this.state.graph[this.state.room_id][1];
+    console.log(`DIRECTIONS: ${directions}`);
+    for (let direction in directions) {
+      if (directions[direction] === '?') {
+        unknownDirections.push(direction);
+      }
+    }
+    return unknownDirections;
   };
 
   moveRooms = async move => {
@@ -90,35 +61,77 @@ class GraphMap extends Component {
           direction: move
         }
       });
+
+      let previous_room_id = this.state.room_id;
+      //   Update graph
+      let graph = this.updateGraph(
+        response.data.room_id,
+        this.parseCoords(response.data.coordinates),
+        response.data.exits,
+        previous_room_id,
+        move
+      );
+
       this.setState({
         room_id: response.data.room_id,
         coords: this.parseCoords(response.data.coordinates),
-        exits: [...response.data.exits]
+        exits: [...response.data.exits],
+        path: [...this.state.path, move],
+        graph
       });
       console.log(response.data);
+      console.log(previous_room_id);
+      console.log(this.state.room_id);
     } catch (error) {
       console.log('Something went wrong moving...');
     }
   };
 
-  getLocation = async () => {
-    try {
-      const response = await axios({
-        method: 'get',
-        url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/init/',
-        headers: {
-          Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
-        }
+  getLocation = () => {
+    axios({
+      method: 'get',
+      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/init/',
+      headers: {
+        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+      }
+    })
+      .then(res => {
+        let graph = this.updateGraph(
+          res.data.room_id,
+          this.parseCoords(res.data.coordinates),
+          res.data.exits
+        );
+        this.setState(prevState => ({
+          room_id: res.data.room_id,
+          coords: this.parseCoords(res.data.coordinates),
+          exits: [...res.data.exits],
+          graph
+        }));
+      })
+      .catch(err => console.log('There was an error.'));
+  };
+
+  updateGraph = (id, coords, exits, previous_room_id = null, move = null) => {
+    const { inverse } = this.state;
+
+    let graph = Object.assign({}, this.state.graph);
+    if (!this.state.graph[id]) {
+      let payload = [];
+      payload.push(coords);
+      const moves = {};
+      exits.forEach(exit => {
+        moves[exit] = '?';
       });
-      this.setState({
-        room_id: response.data.room_id,
-        coords: this.parseCoords(response.data.coordinates),
-        exits: [...response.data.exits]
-      });
-      //   console.log(response.data);
-    } catch (error) {
-      console.log('There was an error.');
+      payload.push(moves);
+      graph = { ...graph, [id]: payload };
     }
+    if (previous_room_id && move) {
+      graph[previous_room_id][1][move] = id;
+      graph[id][1][inverse[move]] = previous_room_id;
+    }
+
+    localStorage.setItem('graph', JSON.stringify(graph));
+    return graph;
   };
 
   parseCoords = coords => {
@@ -134,8 +147,9 @@ class GraphMap extends Component {
   };
 
   handleClick = () => {
-    // this.traverseMap();
-    this.moveRooms('s');
+    this.setState({ generating: true });
+    this.traverseMap();
+    // this.moveRooms('e');
   };
   render() {
     const {
