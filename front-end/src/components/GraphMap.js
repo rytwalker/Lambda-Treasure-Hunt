@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 import axios from 'axios';
 import styled from 'styled-components';
 import logo from '../images/logo.png';
-import { isNull } from 'util';
 
 class GraphMap extends Component {
   state = {
@@ -19,8 +18,6 @@ class GraphMap extends Component {
   };
 
   componentDidMount() {
-    // GET CURRENT LOCATION
-    // if graph in local storage update state
     if (localStorage.hasOwnProperty('graph')) {
       let value = JSON.parse(localStorage.getItem('graph'));
       this.setState({ graph: value });
@@ -34,13 +31,91 @@ class GraphMap extends Component {
     if (unknonwnDirections.length) {
       let move = unknonwnDirections[0];
       this.moveRooms(move);
+    } else {
+      // clearInterval(this.interval);
+      let path = this.breadthFirstSearch();
+      console.log('PATH:');
+      console.log(path);
+      //   let { graph, room_id } = this.state;
+      //   let queue = [];
+      //   let visited = new Set();
+      //   console.log(graph[room_id][1]);
+      //   for (let room in graph[room_id][1]) {
+      //     queue = [...queue, [{ [room]: graph[room_id][1][room] }]];
+      //   }
+
+      //   while (queue.length) {
+      //     let dequeued = queue.shift();
+
+      //     let last_room = dequeued[dequeued.length - 1];
+
+      //     for (let exit in last_room) {
+      //       if (last_room[exit] === '?') {
+      //         console.log('here');
+      //         console.log(dequeued);
+      //         for (let route of dequeued) {
+      //           console.log(route);
+      //           // for (let path in route) {
+      //           //   setTimeout(() => this.moveRooms(path), 16000);
+      //           // }
+      //         }
+      //       } else {
+      //         visited.add(last_room[exit]);
+
+      //         for (let path in graph[last_room[exit]][1]) {
+      //           if (visited.has(graph[last_room[exit]][1][path]) === false) {
+      //             let path_copy = Array.from(dequeued);
+      //             path_copy.push({ [path]: graph[last_room[exit]][1][path] });
+
+      //             queue.push(path_copy);
+      //           }
+      //         }
+      //       }
+      //     }
+      //   }
+      //   // this.interval = setInterval(this.traverseMap, 16000);
+    }
+  };
+
+  breadthFirstSearch = () => {
+    let { graph, room_id } = this.state;
+    let queue = [];
+    let visited = new Set();
+    console.log(graph[room_id][1]);
+    for (let room in graph[room_id][1]) {
+      queue = [...queue, [{ [room]: graph[room_id][1][room] }]];
+    }
+
+    while (queue.length) {
+      let dequeued = queue.shift();
+
+      let last_room = dequeued[dequeued.length - 1];
+
+      for (let exit in last_room) {
+        if (last_room[exit] === '?') {
+          console.log('here');
+          console.log(dequeued);
+          dequeued.pop();
+          return dequeued;
+        } else {
+          visited.add(last_room[exit]);
+
+          for (let path in graph[last_room[exit]][1]) {
+            if (visited.has(graph[last_room[exit]][1][path]) === false) {
+              let path_copy = Array.from(dequeued);
+              path_copy.push({ [path]: graph[last_room[exit]][1][path] });
+
+              queue.push(path_copy);
+            }
+          }
+        }
+      }
     }
   };
 
   getUnknownDirections = () => {
     let unknownDirections = [];
     let directions = this.state.graph[this.state.room_id][1];
-    console.log(`DIRECTIONS: ${directions}`);
     for (let direction in directions) {
       if (directions[direction] === '?') {
         unknownDirections.push(direction);
@@ -49,7 +124,13 @@ class GraphMap extends Component {
     return unknownDirections;
   };
 
-  moveRooms = async move => {
+  //   moveToRoom = (start, end) => {
+  //     // Breadth First Search!
+  //     const queue = [];
+
+  //   }
+
+  moveRooms = async (move, next_room_id = null) => {
     try {
       const response = await axios({
         method: 'post',
@@ -80,8 +161,6 @@ class GraphMap extends Component {
         graph
       });
       console.log(response.data);
-      console.log(previous_room_id);
-      console.log(this.state.room_id);
     } catch (error) {
       console.log('Something went wrong moving...');
     }
@@ -148,6 +227,7 @@ class GraphMap extends Component {
 
   handleClick = () => {
     this.setState({ generating: true });
+    // this.interval = setInterval(this.traverseMap, 16000);
     this.traverseMap();
     // this.moveRooms('e');
   };
