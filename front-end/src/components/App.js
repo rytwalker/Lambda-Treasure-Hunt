@@ -11,7 +11,7 @@ class App extends Component {
       <div className="App">
         <Header />
         {/* <Route exact path="/" component={ComingSoon} /> */}
-        <Route path="/" component={GraphMap} />
+        <Route exact path="/" component={GraphMap} />
         <Route path="/about" component={About} />
         {/* <footer
           style={{

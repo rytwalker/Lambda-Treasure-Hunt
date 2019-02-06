@@ -10,7 +10,9 @@ class Map extends Component {
         style={{
           margin: 'auto',
           width: '100%',
-          height: '100%'
+          height: '100%',
+          flex: 1,
+          padding: '5rem 2rem'
         }}
       >
         <FlexibleXYPlot>

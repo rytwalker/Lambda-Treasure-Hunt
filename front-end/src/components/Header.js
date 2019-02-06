@@ -1,31 +1,44 @@
 import React from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMap, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import styled from 'styled-components';
 import logo from '../images/logo.png';
-import { Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 
 const Header = props => {
   return (
     <StyledHeader>
-      <div className="logo">
-        <img src={logo} alt="Jolly Roger" />
+      <div className="container">
+        <div className="logo">
+          <img src={logo} alt="Jolly Roger" />
+        </div>
+        <h1>Lambda Treasure Hunt</h1>
+        <nav>
+          <NavLink exact to="/">
+            <FontAwesomeIcon icon={faMap} />
+            <span>Map</span>
+          </NavLink>
+          <NavLink to="/about">
+            <FontAwesomeIcon icon={faInfoCircle} />
+            <span>About</span>
+          </NavLink>
+        </nav>
       </div>
-      <h1>Lambda Treasure Hunt</h1>
-      <nav>
-        <Link to="/">Home</Link>
-        <Link to="/generate-graph">Map</Link>
-        <Link to="/about">About</Link>
-      </nav>
     </StyledHeader>
   );
 };
 
 const StyledHeader = styled.header`
   height: 60px;
-  display: flex;
-  align-items: center;
-  color: #e5e5e5;
   background: #3b3f3f;
-  padding: 0 5rem;
+  .container {
+    display: flex;
+    align-items: center;
+    color: #e5e5e5;
+    width: 90%;
+    height: 100%;
+    margin: 0 auto;
+  }
 
   .logo {
     img {
@@ -46,18 +59,26 @@ const StyledHeader = styled.header`
     a,
     a:visited {
       color: #e5e5e5;
-      font-size: 1.6rem;
-      border-bottom: 1px solid #7dcdbe;
+      font-size: 2rem;
+      font-weight: 700;
+      text-transform: uppercase;
       text-decoration: none;
       transition: all 0.2s;
       transform-origin: bottom;
       padding: 0 0.5rem;
+
       &:not(:last-child) {
         margin-right: 2rem;
       }
       &:hover {
-        background: #7dcdbe;
+        color: #7dcdbe;
       }
+      span {
+        margin-left: 1rem;
+      }
+    }
+    .active {
+      color: #7dcdbe !important;
     }
   }
 `;

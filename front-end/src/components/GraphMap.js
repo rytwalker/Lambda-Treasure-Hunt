@@ -5,6 +5,7 @@ import styled from 'styled-components';
 // import ProgressBar from './ProgressBar';
 import data from '../data.json';
 import Map from './Map';
+import Sidebar from './Sidebar';
 
 class GraphMap extends Component {
   state = {
@@ -22,6 +23,7 @@ class GraphMap extends Component {
     inverse: { n: 's', s: 'n', w: 'e', e: 'w' },
     message: '',
     path: [],
+    players: [],
     progress: 0,
     room_id: 0,
     title: '',
@@ -291,6 +293,8 @@ class GraphMap extends Component {
   render() {
     const {
       progress,
+      players,
+      items,
       graph,
       message,
       error,
@@ -313,6 +317,14 @@ class GraphMap extends Component {
         ) : (
           <div>Loading</div>
         )}
+        <Sidebar
+          room_id={room_id}
+          coords={coords}
+          title={title}
+          description={description}
+          items={items}
+          players={players}
+        />
         {/* <button className="btn" onClick={this.handleClick}>
           <img src={logo} alt="Jolly Roger" />
           {generating ? 'Generating...' : 'Generate Map'}
@@ -361,10 +373,10 @@ class GraphMap extends Component {
 
 const StyledGraphMap = styled.div`
   display: flex;
-  height: calc(100vh - 86px);
+  height: calc(100vh - 60px);
   align-items: center;
   justify-content: center;
-  flex-direction: column;
+  ${'' /* flex-direction: column; */}
 
   .btn {
     width: 289px;
