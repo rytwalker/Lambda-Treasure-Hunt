@@ -9,15 +9,16 @@ class Map extends Component {
       <div
         style={{
           margin: 'auto',
+          marginRight: '25%',
           width: '100%',
           height: '100%',
           flex: 1,
-          padding: '5rem 2rem'
+          padding: '3rem 2rem'
         }}
       >
         <FlexibleXYPlot>
           {links.map(link => (
-            <LineSeries strokeWidth="3" color="#E5E5E5" data={link} />
+            <LineSeries strokeWidth="3" color="#DDDDDD" data={link} />
           ))}
           <MarkSeries
             className="mark-series-example"

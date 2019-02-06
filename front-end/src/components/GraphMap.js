@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import data from '../data.json';
 import Map from './Map';
 import Sidebar from './Sidebar';
+import Bottombar from './Bottombar.js';
 
 class GraphMap extends Component {
   state = {
@@ -325,47 +326,9 @@ class GraphMap extends Component {
           items={items}
           players={players}
         />
-        {/* <button className="btn" onClick={this.handleClick}>
-          <img src={logo} alt="Jolly Roger" />
-          {generating ? 'Generating...' : 'Generate Map'}
-        </button>
+        <Bottombar />
+        {/*
         <ProgressBar progress={progress} /> */}
-        {generating && (
-          <code className="log-container">
-            <div className="log">
-              <p>
-                <span className="log-label">Room:</span>
-                {room_id}
-              </p>
-              <p>
-                <span className="log-label">Title:</span>
-                {title}
-              </p>
-              <p>
-                <span className="log-label">Description:</span>
-                {description}
-              </p>
-              {message && (
-                <p>
-                  <span className="log-label">Message:</span>
-                  {message}
-                </p>
-              )}
-              {coords && (
-                <p>
-                  <span className="log-label">Coordinates:</span>
-                  {parsed}
-                </p>
-              )}
-              {error && (
-                <p>
-                  <span className="log-label">Errors:</span>
-                  {error}
-                </p>
-              )}
-            </div>
-          </code>
-        )}
       </StyledGraphMap>
     );
   }
@@ -373,39 +336,11 @@ class GraphMap extends Component {
 
 const StyledGraphMap = styled.div`
   display: flex;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 120px);
   align-items: center;
-  justify-content: center;
+  ${'' /* justify-content: center; */}
+  flex-wrap: wrap;
   ${'' /* flex-direction: column; */}
-
-  .btn {
-    width: 289px;
-    background: #525959;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    font-size: 2.4rem;
-    color: #f2f2f2;
-    font-weight: 700;
-    text-transform: uppercase;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-family: 'Rubik';
-    padding: 1rem;
-    transition: all 0.2s;
-    img {
-      height: 46.63px;
-      width: 33px;
-      margin-right: 2rem;
-    }
-    &:hover,
-    &:focus {
-      color: #7dcdbe;
-      background: #3b3f3f;
-      outline: none;
-    }
-  }
 
   .log-container {
     width: 289px;

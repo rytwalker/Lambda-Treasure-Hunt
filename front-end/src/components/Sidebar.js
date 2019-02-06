@@ -62,6 +62,10 @@ const Sidebar = ({ room_id, coords, title, description, items, players }) => {
 const StyledSidebar = styled.div`
   width: 25%;
   height: 100%;
+  position: fixed;
+  top: calc(0 - 60px);
+  right: 0;
+  margin-top: 60px;
   display: flex;
   flex-direction: column;
   background: #d3e5e5;
