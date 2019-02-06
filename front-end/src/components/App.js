@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { Route } from 'react-router-dom';
 import About from './About';
-import ComingSoon from './ComingSoon';
+// import ComingSoon from './ComingSoon';
 import GraphMap from './GraphMap';
 import Header from './Header';
 
@@ -10,8 +10,8 @@ class App extends Component {
     return (
       <div className="App">
         <Header />
-        <Route exact path="/" component={ComingSoon} />
-        <Route path="/generate-graph" component={GraphMap} />
+        {/* <Route exact path="/" component={ComingSoon} /> */}
+        <Route path="/" component={GraphMap} />
         <Route path="/about" component={About} />
         {/* <footer
           style={{

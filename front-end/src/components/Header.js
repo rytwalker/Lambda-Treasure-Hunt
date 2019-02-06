@@ -36,7 +36,7 @@ const StyledHeader = styled.header`
 
   h1 {
     margin-right: auto;
-    margin-left: 3rem;
+    margin-left: auto;
     font-size: 3.6rem;
     text-transform: uppercase;
     font-weight: 700;

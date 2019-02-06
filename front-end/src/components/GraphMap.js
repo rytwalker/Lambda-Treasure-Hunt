@@ -1,61 +1,105 @@
 import React, { Component } from 'react';
 import axios from 'axios';
 import styled from 'styled-components';
-import logo from '../images/logo.png';
+// import logo from '../images/logo.png';
+// import ProgressBar from './ProgressBar';
+import data from '../data.json';
+import Map from './Map';
 
 class GraphMap extends Component {
   state = {
+    allCoords: [],
+    allLinks: [],
     coords: { x: 50, y: 60 },
     cooldown: 15,
+    description: '',
     error: '',
     exits: [],
+    items: [],
     generating: false,
     graph: {},
+    graphLoaded: false,
     inverse: { n: 's', s: 'n', w: 'e', e: 'w' },
     message: '',
     path: [],
     progress: 0,
     room_id: 0,
+    title: '',
     visited: new Set()
   };
 
   componentDidMount() {
     if (localStorage.hasOwnProperty('graph')) {
       let value = JSON.parse(localStorage.getItem('graph'));
-      this.setState({ graph: value });
+      this.setState({ graph: value, graphLoaded: true });
+    } else {
+      localStorage.setItem('graph', JSON.stringify(data));
+      let value = JSON.parse(localStorage.getItem('graph'));
+      this.setState({ graph: value, graphLoaded: true });
     }
-
     this.getLocation();
   }
 
+  componentDidUpdate(prevState) {
+    if (!this.state.allCoords.length && this.state.graph) {
+      this.mapLinks();
+      this.mapCoords();
+    }
+  }
+
+  mapCoords = () => {
+    const { graph } = this.state;
+    console.log(this.state.graph);
+    const setCoords = [];
+    for (let room in graph) {
+      setCoords.push(graph[room][0]);
+    }
+    this.setState({ allCoords: setCoords });
+  };
+
+  mapLinks = () => {
+    const { graph } = this.state;
+    const setLinks = [];
+    for (let room in graph) {
+      for (let linkedRoom in graph[room][1]) {
+        setLinks.push([graph[room][0], graph[graph[room][1][linkedRoom]][0]]);
+      }
+    }
+    this.setState({ allLinks: setLinks });
+  };
+
   traverseMap = () => {
+    let count = 1;
     let unknownDirections = this.getUnknownDirections();
     console.log(`UNKNOWN DIRECTIONS: ${unknownDirections}`);
     if (unknownDirections.length) {
       let move = unknownDirections[0];
       this.moveRooms(move);
     } else {
-      clearInterval(this.interval);
       let path = this.findShortestPath();
-      let count = 1;
-      for (let direction of path) {
-        console.log(direction);
-        for (let d in direction) {
-          setTimeout(() => {
-            this.moveRooms(d);
-          }, this.state.cooldown * 1000 * count);
-          count++;
+      if (typeof path === 'string') {
+        console.log(path);
+      } else {
+        for (let direction of path) {
+          console.log(direction);
+          for (let d in direction) {
+            setTimeout(() => {
+              this.moveRooms(d, direction[d]);
+            }, this.state.cooldown * 1000 * count);
+            count++;
+          }
         }
       }
-      console.log('here');
-      this.interval = setInterval(
-        this.traverseMap,
-        this.state.cooldown * 1000 * count
-      );
-      count = 1;
     }
 
-    this.updateVisited();
+    if (this.state.visited.size < 499) {
+      setTimeout(this.traverseMap, this.state.cooldown * 1000 * count + 1000);
+      this.updateVisited();
+      count = 1;
+    } else {
+      console.log('Traversal Complete');
+      this.setState({ generating: false });
+    }
   };
 
   updateVisited = () => {
@@ -74,7 +118,7 @@ class GraphMap extends Component {
         }
       }
     }
-    let progress = visited.size / 500;
+    let progress = Math.round((visited.size / 500) * 100);
     this.setState({ visited, progress });
   };
 
@@ -109,6 +153,7 @@ class GraphMap extends Component {
         }
       }
     }
+    return 'That target does not exisit.';
   };
 
   getUnknownDirections = () => {
@@ -124,10 +169,10 @@ class GraphMap extends Component {
 
   moveRooms = async (move, next_room_id = null) => {
     let data;
-    if (next_room_id) {
+    if (next_room_id !== null) {
       data = {
         direction: move,
-        next_room_id: toString(next_room_id)
+        next_room_id: next_room_id.toString()
       };
     } else {
       data = {
@@ -161,11 +206,15 @@ class GraphMap extends Component {
         exits: [...response.data.exits],
         path: [...this.state.path, move],
         cooldown: response.data.cooldown,
+        message: response.data.messages[0],
+        description: response.data.description,
+        title: response.data.title,
         graph
       });
       console.log(response.data);
     } catch (error) {
       console.log('Something went wrong moving...');
+      console.dir(error);
     }
   };
 
@@ -178,6 +227,7 @@ class GraphMap extends Component {
       }
     })
       .then(res => {
+        console.log(res.data);
         let graph = this.updateGraph(
           res.data.room_id,
           this.parseCoords(res.data.coordinates),
@@ -187,12 +237,16 @@ class GraphMap extends Component {
           room_id: res.data.room_id,
           coords: this.parseCoords(res.data.coordinates),
           exits: [...res.data.exits],
-          ooldown: res.data.cooldown,
+          description: res.data.description,
+          title: res.data.title,
           graph
         }));
         this.updateVisited();
       })
-      .catch(err => console.log('There was an error.'));
+      .catch(err => {
+        console.log('There was an error.');
+        console.dir(err);
+      });
   };
 
   updateGraph = (id, coords, exits, previous_room_id = null, move = null) => {
@@ -232,17 +286,18 @@ class GraphMap extends Component {
 
   handleClick = () => {
     this.setState({ generating: true });
-    // this.traverseMap();
-    this.interval = setInterval(this.traverseMap, this.state.cooldown * 1000);
-    // this.moveRooms('s');
+    this.traverseMap();
   };
   render() {
     const {
       progress,
+      graph,
       message,
       error,
       coords,
       room_id,
+      title,
+      description,
       generating
     } = this.state;
     let parsed = [];
@@ -253,36 +308,30 @@ class GraphMap extends Component {
     }
     return (
       <StyledGraphMap>
-        <button className="btn" onClick={this.handleClick}>
+        {graph ? (
+          <Map coords={this.state.allCoords} links={this.state.allLinks} />
+        ) : (
+          <div>Loading</div>
+        )}
+        {/* <button className="btn" onClick={this.handleClick}>
           <img src={logo} alt="Jolly Roger" />
           {generating ? 'Generating...' : 'Generate Map'}
         </button>
-        <div className="progress-bar-container">
-          <div className="progress-bar">
-            <div
-              style={{
-                width: `${progress}%`,
-                height: '100%',
-                background: '#7dcdbe',
-                transition: 'width .2s ease-in-out'
-              }}
-              className="progress-bar-fill"
-            />
-          </div>
-          <div className="progress-bar-text">
-            {generating && (
-              <>
-                <span>GENERATING...</span> <span>{progress}%</span>
-              </>
-            )}
-          </div>
-        </div>
+        <ProgressBar progress={progress} /> */}
         {generating && (
           <code className="log-container">
             <div className="log">
               <p>
                 <span className="log-label">Room:</span>
                 {room_id}
+              </p>
+              <p>
+                <span className="log-label">Title:</span>
+                {title}
+              </p>
+              <p>
+                <span className="log-label">Description:</span>
+                {description}
               </p>
               {message && (
                 <p>
@@ -343,23 +392,6 @@ const StyledGraphMap = styled.div`
       color: #7dcdbe;
       background: #3b3f3f;
       outline: none;
-    }
-  }
-
-  .progress-bar-container {
-    margin-top: 2rem;
-    .progress-bar {
-      height: 20px;
-      width: 289px;
-      border-radius: 10px;
-      border: 2px solid #7dcdbe;
-      background: #f5f5f5;
-      overflow: hidden;
-    }
-    .progress-bar-text {
-      margin-top: 0.5rem;
-      display: flex;
-      justify-content: space-between;
     }
   }
 
