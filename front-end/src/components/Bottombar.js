@@ -2,11 +2,17 @@ import React from 'react';
 import styled from 'styled-components';
 import Button from './Button';
 
-const Bottombar = () => {
+const Bottombar = ({ onclick, messages }) => {
   return (
     <StyledBottombar>
-      <Button />
-      <div className="message">You have walked east.</div>
+      <Button onclick={onclick} />
+      <div className="message">
+        {!messages.length ? (
+          <p>{'Click EXPLORE to start exploring.'}</p>
+        ) : (
+          messages.map(message => <span key={message}>{message} </span>)
+        )}
+      </div>
     </StyledBottombar>
   );
 };

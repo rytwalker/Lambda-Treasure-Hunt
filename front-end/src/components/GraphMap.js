@@ -15,18 +15,24 @@ class GraphMap extends Component {
     coords: { x: 50, y: 60 },
     cooldown: 15,
     description: '',
+    encumbrance: null,
     error: '',
     exits: [],
     items: [],
     generating: false,
+    gold: null,
     graph: {},
     graphLoaded: false,
+    inventory: [],
     inverse: { n: 's', s: 'n', w: 'e', e: 'w' },
-    message: '',
+    messages: [],
+    name: 'Ryan',
     path: [],
     players: [],
     progress: 0,
     room_id: 0,
+    speed: null,
+    strength: null,
     title: '',
     visited: new Set()
   };
@@ -41,6 +47,7 @@ class GraphMap extends Component {
       this.setState({ graph: value, graphLoaded: true });
     }
     this.getLocation();
+    this.getStatus();
   }
 
   componentDidUpdate(prevState) {
@@ -50,9 +57,103 @@ class GraphMap extends Component {
     }
   }
 
+  travelToShop = () => {
+    let count = 1;
+    const path = this.findShortestPath(this.state.room_id, 1);
+    console.log(path);
+    if (typeof path === 'string') {
+      console.log(path);
+    } else {
+      for (let direction of path) {
+        console.log(direction);
+        for (let d in direction) {
+          setTimeout(() => {
+            this.moveRooms(d, direction[d]);
+          }, this.state.cooldown * 1000 * count);
+          count++;
+        }
+      }
+    }
+  };
+
+  getStatus = () => {
+    axios({
+      method: 'post',
+      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/status/',
+      headers: {
+        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+      }
+    })
+      .then(res => {
+        console.log(res.data);
+
+        this.setState(prevState => ({
+          name: res.data.name,
+          cooldown: res.data.cooldown,
+          encumbrance: res.data.encumbrance,
+          strength: res.data.strength,
+          speed: res.data.speed,
+          gold: res.data.gold,
+          inventory: [...res.data.inventory],
+          status: [...res.data.status],
+          errors: [...res.data.errors],
+          messages: [...res.data.messages]
+        }));
+      })
+      .catch(err => {
+        console.log('There was an error.');
+        console.dir(err);
+      });
+  };
+
+  sellTreasure = name => {
+    axios({
+      method: 'post',
+      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/sell/',
+      headers: {
+        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+      },
+      data: {
+        name,
+        confirm: 'yes'
+      }
+    })
+      .then(res => {
+        console.log(res.data);
+      })
+      .catch(err => {
+        console.log('There was an error.');
+        console.dir(err);
+      });
+  };
+
+  takeTreasure = name => {
+    axios({
+      method: 'post',
+      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/take/',
+      headers: {
+        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+      },
+      data: {
+        name
+      }
+    })
+      .then(res => {
+        this.setState({
+          messages: res.data.messages,
+          items: res.data.items,
+          players: res.data.players
+        });
+        console.log(res.data);
+      })
+      .catch(err => {
+        console.log('There was an error.');
+        console.dir(err);
+      });
+  };
+
   mapCoords = () => {
     const { graph } = this.state;
-    console.log(this.state.graph);
     const setCoords = [];
     for (let room in graph) {
       setCoords.push(graph[room][0]);
@@ -69,6 +170,46 @@ class GraphMap extends Component {
       }
     }
     this.setState({ allLinks: setLinks });
+  };
+
+  exploreMap = () => {
+    const { graph, room_id } = this.state;
+
+    let exits = [...this.state.exits];
+    // Pick one at random
+    let random = Math.floor(Math.random() * exits.length);
+    // Move
+    this.moveRooms(exits[random], graph[room_id][exits[random]])
+      .then(() => {
+        // Check for items
+        if (this.state.items.length) {
+          console.log(this.state.items[0]);
+          setTimeout(() => {
+            this.takeTreasure(this.state.items[0]);
+          }, 1000 * this.state.cooldown);
+        }
+      })
+      .then(() => {
+        setTimeout(this.getStatus, 1000 * this.state.cooldown);
+      })
+      // .then(() => {
+      //   if (this.state.encumbrance > 5) {
+      //     this.travelToShop();
+
+      //     this.state.items.forEach((item, i) => {
+      //       setTimeout(
+      //         () => this.sellTreasure(item),
+      //         1000 * this.state.cooldown * i + 1
+      //       );
+      //     });
+      //   }
+      // })
+      // .then(() => {
+      //   setTimeout(this.getStatus, 1000 * this.state.cooldown);
+      // })
+      .then(() => {
+        setTimeout(this.exploreMap, 1000 * this.state.cooldown);
+      });
   };
 
   traverseMap = () => {
@@ -140,7 +281,9 @@ class GraphMap extends Component {
 
       for (let exit in last_room) {
         if (last_room[exit] === target) {
-          dequeued.pop();
+          if (target === '?') {
+            dequeued.pop();
+          }
           return dequeued;
         } else {
           visited.add(last_room[exit]);
@@ -193,7 +336,7 @@ class GraphMap extends Component {
       });
 
       let previous_room_id = this.state.room_id;
-      console.log(`PREVIOUS ROOM: ${previous_room_id}`);
+
       //   Update graph
       let graph = this.updateGraph(
         response.data.room_id,
@@ -209,9 +352,11 @@ class GraphMap extends Component {
         exits: [...response.data.exits],
         path: [...this.state.path, move],
         cooldown: response.data.cooldown,
-        message: response.data.messages[0],
+        messages: response.data.messages,
         description: response.data.description,
         title: response.data.title,
+        players: response.data.players,
+        items: response.data.items,
         graph
       });
       console.log(response.data);
@@ -242,6 +387,8 @@ class GraphMap extends Component {
           exits: [...res.data.exits],
           description: res.data.description,
           title: res.data.title,
+          players: res.data.players,
+          items: res.data.items,
           graph
         }));
         this.updateVisited();
@@ -256,6 +403,7 @@ class GraphMap extends Component {
     const { inverse } = this.state;
 
     let graph = Object.assign({}, this.state.graph);
+    // Make node if none
     if (!this.state.graph[id]) {
       let payload = [];
       payload.push(coords);
@@ -266,7 +414,13 @@ class GraphMap extends Component {
       payload.push(moves);
       graph = { ...graph, [id]: payload };
     }
-    if (previous_room_id !== null && move && previous_room_id !== id) {
+
+    if (
+      previous_room_id !== null &&
+      move &&
+      previous_room_id !== id &&
+      graph[previous_room_id][1][move] === '?'
+    ) {
       graph[previous_room_id][1][move] = id;
       graph[id][1][inverse[move]] = previous_room_id;
     }
@@ -288,22 +442,30 @@ class GraphMap extends Component {
   };
 
   handleClick = () => {
-    this.setState({ generating: true });
-    this.traverseMap();
+    // this.setState({ generating: true });
+    // this.traverseMap();
+    // this.moveRooms('w', 1);
+    // this.takeTreasure('tiny treasure');
+    // this.travelToShop();
+    this.sellTreasure('treasure');
+    // this.exploreMap();
   };
   render() {
     const {
-      progress,
       players,
       items,
       graph,
-      message,
-      error,
       coords,
       room_id,
       title,
       description,
-      generating
+      messages,
+      name,
+      encumbrance,
+      strength,
+      speed,
+      gold,
+      inventory
     } = this.state;
     let parsed = [];
     if (coords) {
@@ -325,8 +487,14 @@ class GraphMap extends Component {
           description={description}
           items={items}
           players={players}
+          name={name}
+          encumbrance={encumbrance}
+          strength={strength}
+          speed={speed}
+          gold={gold}
+          inventory={inventory}
         />
-        <Bottombar />
+        <Bottombar onclick={this.handleClick} messages={messages} />
         {/*
         <ProgressBar progress={progress} /> */}
       </StyledGraphMap>

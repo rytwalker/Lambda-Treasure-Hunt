@@ -4,7 +4,7 @@ import styled from 'styled-components';
 class Button extends Component {
   state = {};
   handleClick = () => {
-    console.log('clicked!');
+    this.props.onclick();
   };
   render() {
     return (

@@ -1,7 +1,20 @@
 import React from 'react';
 import styled from 'styled-components';
 
-const Sidebar = ({ room_id, coords, title, description, items, players }) => {
+const Sidebar = ({
+  room_id,
+  coords,
+  title,
+  description,
+  items,
+  players,
+  name,
+  encumbrance,
+  strength,
+  speed,
+  gold,
+  inventory
+}) => {
   return (
     <StyledSidebar>
       <div className="room">
@@ -19,7 +32,7 @@ const Sidebar = ({ room_id, coords, title, description, items, players }) => {
           {!items.length ? (
             <p>There are no items in this room.</p>
           ) : (
-            items.map(item => <span>{item}</span>)
+            items.map(item => <span key={item + Math.random()}>{item} </span>)
           )}
         </div>
         <div className="info">
@@ -27,30 +40,39 @@ const Sidebar = ({ room_id, coords, title, description, items, players }) => {
           {!players.length ? (
             <p>There are no players in this room.</p>
           ) : (
-            players.map(player => <span>{player}</span>)
+            players.map(player => <span key={player}>{player} </span>)
           )}
         </div>
       </div>
       <div className="player">
         <div className="player-id">
-          <h2>Ryan</h2>
+          <h2>{name}</h2>
           <div className="gold-info">
-            Gold: <span>400</span>
+            Gold: <span>{gold}</span>
           </div>
         </div>
         <div className="player-stats">
           <ul>
             <li>
-              Encumberance: <span>2</span>
+              Encumbrance: <span>{encumbrance}</span>
             </li>
             <li>
-              Strength: <span>2</span>
+              Strength: <span>{strength}</span>
             </li>
             <li>
-              Speend: <span>2</span>
+              Speed: <span>{speed}</span>
             </li>
             <li>
-              Inventory: <span>2</span>
+              Inventory:{' '}
+              <span>
+                {!inventory.length ? (
+                  <p>Empty.</p>
+                ) : (
+                  inventory.map(item => (
+                    <span key={item + Math.random()}>{item} </span>
+                  ))
+                )}
+              </span>
             </li>
           </ul>
         </div>
