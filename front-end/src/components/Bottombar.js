@@ -16,6 +16,7 @@ class Bottombar extends Component {
     }
   };
   handleSellTreasure = () => this.props.sellTreasure(this.props.inventory[0]);
+  handleTakeTreasure = () => this.props.takeTreasure(this.props.items[0]);
 
   render() {
     const { onclick, messages } = this.props;
@@ -48,7 +49,7 @@ class Bottombar extends Component {
           <div className="manual-button" onClick={this.handleSellTreasure}>
             <FontAwesomeIcon icon={faDollarSign} />
           </div>
-          <div className="manual-button">
+          <div className="manual-button" onClick={this.handleTakeTreasure}>
             <FontAwesomeIcon icon={faHandHolding} />
           </div>
         </div>
@@ -76,7 +77,7 @@ const StyledBottombar = styled.div`
     justify-content: space-between;
     align-items: center;
     width: 25%;
-    padding: 0 1rem;
+    ${'' /* padding: 0 1rem; */}
     background: #525959;
     height: 100%;
     .manual-button {
@@ -86,9 +87,15 @@ const StyledBottombar = styled.div`
       font-weight: 700;
       transition: all 0.2s;
       cursor: pointer;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
       &:hover {
         color: #7dcdbe;
+        background: #3b3f3f;
       }
     }
   }

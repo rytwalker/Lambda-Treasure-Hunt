@@ -1,5 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
+import ProgressBar from './ProgressBar';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faDollarSign } from '@fortawesome/free-solid-svg-icons';
 
 const Sidebar = ({
   room_id,
@@ -48,9 +51,10 @@ const Sidebar = ({
         <div className="player-id">
           <h2>{name}</h2>
           <div className="gold-info">
-            Gold: <span>{gold}</span>
+            <FontAwesomeIcon icon={faDollarSign} /> <span>{gold}</span>
           </div>
         </div>
+        <ProgressBar sidebar />
         <div className="player-stats">
           <ul>
             <li>
@@ -131,7 +135,7 @@ const StyledSidebar = styled.div`
       width: 100%;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1rem;
+      ${'' /* margin-bottom: 1rem; */}
       h2 {
         font-size: 2.4rem;
         font-weight: 700;
@@ -149,6 +153,7 @@ const StyledSidebar = styled.div`
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      margin-top: 2rem;
       ul {
         width: 45%;
         li {

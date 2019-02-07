@@ -1,15 +1,14 @@
 import React from 'react';
 import styled from 'styled-components';
 
-const ProgressBar = ({ progress }) => {
+const ProgressBar = ({ progress, sidebar }) => {
   return (
-    <StyledProgressBar>
+    <StyledProgressBar sidebar={sidebar}>
       <div className="progress-bar">
         <div
           style={{
             width: `100%`,
             height: '100%',
-            background: '#7dcdbe',
             transition: 'width .2s ease-in-out'
           }}
           className="progress-bar-fill"
@@ -27,7 +26,7 @@ const ProgressBar = ({ progress }) => {
 };
 
 const StyledProgressBar = styled.div`
-  margin-top: 2rem;
+  margin-top: ${props => (props.sidebar ? '0' : '2rem')};
   .progress-bar {
     height: 15px;
     width: 100%;
@@ -35,6 +34,10 @@ const StyledProgressBar = styled.div`
     border: 2px solid #7dcdbe;
     background: #f5f5f5;
     overflow: hidden;
+
+    .progress-bar-fill {
+      background: ${props => (props.sidebar ? '#f3f3f3' : '#7dcdbe')};
+    }
   }
   .progress-bar-text {
     margin-top: 0.5rem;

@@ -1,9 +1,6 @@
 import React, { Component } from 'react';
 import axios from 'axios';
 import styled from 'styled-components';
-// import KeyboardEventHandler from 'react-keyboard-event-handler';
-// import logo from '../images/logo.png';
-// import ProgressBar from './ProgressBar';
 import data from '../data.json';
 import Map from './Map';
 import Loading from './Loading';
@@ -40,6 +37,8 @@ class GraphMap extends Component {
     visited: new Set()
   };
 
+  // LIFE CYCLE METHODS
+
   componentDidMount() {
     if (localStorage.hasOwnProperty('graph')) {
       let value = JSON.parse(localStorage.getItem('graph'));
@@ -61,23 +60,59 @@ class GraphMap extends Component {
     }
   }
 
-  travelToShop = () => {
-    let count = 1;
-    const path = this.findShortestPath(this.state.room_id, 1);
-    console.log(path);
-    if (typeof path === 'string') {
-      console.log(path);
-    } else {
-      for (let direction of path) {
-        console.log(direction);
-        for (let d in direction) {
-          setTimeout(() => {
-            this.moveRooms(d, direction[d]);
-          }, this.state.cooldown * 1000 * count);
-          count++;
-        }
+  // API METHODS
+  changeName = () => {
+    axios({
+      method: 'post',
+      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/change_name/',
+      headers: {
+        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+      },
+      data: {
+        name: 'Pirate Ry'
       }
-    }
+    })
+      .then(res => {
+        console.log(res.data);
+      })
+      .catch(err => {
+        console.log('There was an error.');
+        console.dir(err);
+      });
+  };
+
+  getLocation = () => {
+    axios({
+      method: 'get',
+      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/init/',
+      headers: {
+        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+      }
+    })
+      .then(res => {
+        console.log(res.data);
+        let graph = this.updateGraph(
+          res.data.room_id,
+          this.parseCoords(res.data.coordinates),
+          res.data.exits
+        );
+        this.setState(prevState => ({
+          room_id: res.data.room_id,
+          coords: this.parseCoords(res.data.coordinates),
+          cooldown: res.status.cooldown,
+          exits: [...res.data.exits],
+          description: res.data.description,
+          title: res.data.title,
+          players: res.data.players,
+          items: res.data.items,
+          graph
+        }));
+        this.updateVisited();
+      })
+      .catch(err => {
+        console.log('There was an error.');
+        console.dir(err);
+      });
   };
 
   getStatus = () => {
@@ -107,236 +142,6 @@ class GraphMap extends Component {
         console.log('There was an error.');
         console.dir(err);
       });
-  };
-
-  sellTreasure = name => {
-    axios({
-      method: 'post',
-      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/sell/',
-      headers: {
-        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
-      },
-      data: {
-        name,
-        confirm: 'yes'
-      }
-    })
-      .then(res => {
-        console.log(res.data);
-        this.setState({ messages: [...res.data.messages] }, () =>
-          this.getStatus()
-        );
-      })
-      .catch(err => {
-        console.log('There was an error.');
-        console.dir(err);
-      });
-  };
-
-  takeTreasure = name => {
-    axios({
-      method: 'post',
-      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/take/',
-      headers: {
-        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
-      },
-      data: {
-        name
-      }
-    })
-      .then(res => {
-        this.setState({
-          messages: res.data.messages,
-          items: res.data.items,
-          players: res.data.players
-        });
-        console.log(res.data);
-      })
-      .catch(err => {
-        console.log('There was an error.');
-        console.dir(err);
-      });
-  };
-
-  mapCoords = () => {
-    const { graph, room_id } = this.state;
-    const setCoords = [];
-    for (let room in graph) {
-      let data = graph[room][0];
-      // eslint-disable-next-line
-      if (room != room_id) {
-        data.color = '#525959';
-      }
-      setCoords.push(data);
-    }
-    this.setState({ allCoords: setCoords });
-  };
-
-  mapLinks = () => {
-    const { graph } = this.state;
-    const setLinks = [];
-    for (let room in graph) {
-      for (let linkedRoom in graph[room][1]) {
-        setLinks.push([graph[room][0], graph[graph[room][1][linkedRoom]][0]]);
-      }
-    }
-    this.setState({ allLinks: setLinks });
-  };
-
-  exploreMap = () => {
-    const { graph, room_id } = this.state;
-
-    let exits = [...this.state.exits];
-    // Pick one at random
-    let random = Math.floor(Math.random() * exits.length);
-    // Move
-    this.moveRooms(exits[random], graph[room_id][exits[random]])
-      .then(() => {
-        // Check for items
-        if (this.state.items.length) {
-          console.log(this.state.items[0]);
-          setTimeout(() => {
-            this.takeTreasure(this.state.items[0]);
-          }, 1000 * this.state.cooldown);
-        }
-      })
-      .then(() => {
-        setTimeout(this.getStatus, 1000 * this.state.cooldown);
-      })
-      // .then(() => {
-      //   if (this.state.encumbrance > 5) {
-      //     this.travelToShop();
-
-      //     this.state.items.forEach((item, i) => {
-      //       setTimeout(
-      //         () => this.sellTreasure(item),
-      //         1000 * this.state.cooldown * i + 1
-      //       );
-      //     });
-      //   }
-      // })
-      // .then(() => {
-      //   setTimeout(this.getStatus, 1000 * this.state.cooldown);
-      // })
-      .then(() => {
-        setTimeout(this.exploreMap, 1000 * this.state.cooldown);
-      });
-  };
-
-  traverseMap = () => {
-    let count = 1;
-    let unknownDirections = this.getUnknownDirections();
-    console.log(`UNKNOWN DIRECTIONS: ${unknownDirections}`);
-    if (unknownDirections.length) {
-      let move = unknownDirections[0];
-      this.moveRooms(move);
-    } else {
-      let path = this.findShortestPath();
-      if (typeof path === 'string') {
-        console.log(path);
-      } else {
-        for (let direction of path) {
-          console.log(direction);
-          for (let d in direction) {
-            setTimeout(() => {
-              this.moveRooms(d, direction[d]);
-            }, this.state.cooldown * 1000 * count);
-            count++;
-          }
-        }
-      }
-    }
-
-    if (this.state.visited.size < 499) {
-      setTimeout(this.traverseMap, this.state.cooldown * 1000 * count + 1000);
-      this.updateVisited();
-      count = 1;
-    } else {
-      console.log('Traversal Complete');
-      this.setState({ generating: false });
-    }
-  };
-
-  updateVisited = () => {
-    // UPDATE PROGRESS
-    let visited = new Set(this.state.set);
-    for (let key in this.state.graph) {
-      if (!visited.has(key)) {
-        let qms = [];
-        for (let direction in key) {
-          if (key[direction] === '?') {
-            qms.push(direction);
-          }
-        }
-        if (!qms.length) {
-          visited.add(key);
-        }
-      }
-    }
-    let progress = Math.round((visited.size / 500) * 100);
-    this.setState({ visited, progress });
-  };
-
-  findShortestPath = (start = this.state.room_id, target = '?') => {
-    let { graph } = this.state;
-    let queue = [];
-    let visited = new Set();
-    for (let room in graph[start][1]) {
-      queue = [...queue, [{ [room]: graph[start][1][room] }]];
-    }
-
-    while (queue.length) {
-      let dequeued = queue.shift();
-
-      let last_room = dequeued[dequeued.length - 1];
-
-      for (let exit in last_room) {
-        if (last_room[exit] === target) {
-          if (target === '?') {
-            dequeued.pop();
-          }
-          dequeued.forEach(item => {
-            for (let key in item) {
-              graph[item[key]][0].color = '#d3e5e5';
-            }
-          });
-          return dequeued;
-        } else {
-          visited.add(last_room[exit]);
-
-          for (let path in graph[last_room[exit]][1]) {
-            if (visited.has(graph[last_room[exit]][1][path]) === false) {
-              let path_copy = Array.from(dequeued);
-              path_copy.push({ [path]: graph[last_room[exit]][1][path] });
-
-              queue.push(path_copy);
-            }
-          }
-        }
-      }
-    }
-    return 'That target does not exisit.';
-  };
-
-  getUnknownDirections = () => {
-    let unknownDirections = [];
-    let directions = this.state.graph[this.state.room_id][1];
-    for (let direction in directions) {
-      if (directions[direction] === '?') {
-        unknownDirections.push(direction);
-      }
-    }
-    return unknownDirections;
-  };
-
-  manualMove = move => {
-    const { graph, room_id } = this.state;
-
-    if (graph[room_id][1][move] || graph[room_id][1][move] === 0) {
-      this.moveRooms(move, graph[room_id][1][move]);
-    } else {
-      this.setState({ messages: ["You can't go that way."] });
-    }
   };
 
   moveRooms = async (move, next_room_id = null) => {
@@ -392,38 +197,238 @@ class GraphMap extends Component {
     }
   };
 
-  getLocation = () => {
+  sellTreasure = name => {
     axios({
-      method: 'get',
-      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/init/',
+      method: 'post',
+      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/sell/',
       headers: {
         Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+      },
+      data: {
+        name,
+        confirm: 'yes'
       }
     })
       .then(res => {
         console.log(res.data);
-        let graph = this.updateGraph(
-          res.data.room_id,
-          this.parseCoords(res.data.coordinates),
-          res.data.exits
+        this.setState({ messages: [...res.data.messages] }, () =>
+          this.getStatus()
         );
-        this.setState(prevState => ({
-          room_id: res.data.room_id,
-          coords: this.parseCoords(res.data.coordinates),
-          cooldown: res.status.cooldown,
-          exits: [...res.data.exits],
-          description: res.data.description,
-          title: res.data.title,
-          players: res.data.players,
-          items: res.data.items,
-          graph
-        }));
-        this.updateVisited();
       })
       .catch(err => {
         console.log('There was an error.');
         console.dir(err);
       });
+  };
+
+  takeTreasure = name => {
+    axios({
+      method: 'post',
+      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/take/',
+      headers: {
+        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+      },
+      data: {
+        name
+      }
+    })
+      .then(res => {
+        this.setState({
+          messages: res.data.messages,
+          items: res.data.items,
+          players: res.data.players
+        });
+        console.log(res.data);
+      })
+      .catch(err => {
+        console.log('There was an error.');
+        console.dir(err);
+      });
+  };
+
+  // AUTOMATED METHODS
+  exploreMap = () => {
+    const { graph, room_id } = this.state;
+
+    let exits = [...this.state.exits];
+    // Pick one at random
+    let random = Math.floor(Math.random() * exits.length);
+    // Move
+    this.moveRooms(exits[random], graph[room_id][exits[random]])
+      .then(() => {
+        // Check for items
+        if (this.state.items.length) {
+          console.log(this.state.items[0]);
+          setTimeout(() => {
+            this.takeTreasure(this.state.items[0]);
+          }, 1000 * this.state.cooldown);
+        }
+      })
+      .then(() => {
+        setTimeout(this.getStatus, 1000 * this.state.cooldown);
+      })
+      // .then(() => {
+      //   if (this.state.encumbrance > 5) {
+      //     this.travelToShop();
+
+      //     this.state.items.forEach((item, i) => {
+      //       setTimeout(
+      //         () => this.sellTreasure(item),
+      //         1000 * this.state.cooldown * i + 1
+      //       );
+      //     });
+      //   }
+      // })
+      // .then(() => {
+      //   setTimeout(this.getStatus, 1000 * this.state.cooldown);
+      // })
+      .then(() => {
+        setTimeout(this.exploreMap, 1000 * this.state.cooldown);
+      });
+  };
+
+  travelToShop = () => {
+    let count = 1;
+    const path = this.findShortestPath(this.state.room_id, 1);
+    console.log(path);
+    if (typeof path === 'string') {
+      console.log(path);
+    } else {
+      for (let direction of path) {
+        console.log(direction);
+        for (let d in direction) {
+          setTimeout(() => {
+            this.moveRooms(d, direction[d]);
+          }, this.state.cooldown * 1000 * count);
+          count++;
+        }
+      }
+    }
+  };
+
+  traverseMap = () => {
+    let count = 1;
+    let unknownDirections = this.getUnknownDirections();
+    console.log(`UNKNOWN DIRECTIONS: ${unknownDirections}`);
+    if (unknownDirections.length) {
+      let move = unknownDirections[0];
+      this.moveRooms(move);
+    } else {
+      let path = this.findShortestPath();
+      if (typeof path === 'string') {
+        console.log(path);
+      } else {
+        for (let direction of path) {
+          console.log(direction);
+          for (let d in direction) {
+            setTimeout(() => {
+              this.moveRooms(d, direction[d]);
+            }, this.state.cooldown * 1000 * count);
+            count++;
+          }
+        }
+      }
+    }
+
+    if (this.state.visited.size < 499) {
+      setTimeout(this.traverseMap, this.state.cooldown * 1000 * count + 1000);
+      this.updateVisited();
+      count = 1;
+    } else {
+      console.log('Traversal Complete');
+      this.setState({ generating: false });
+    }
+  };
+
+  // HELPER MATHODS
+
+  findShortestPath = (start = this.state.room_id, target = '?') => {
+    let { graph } = this.state;
+    let queue = [];
+    let visited = new Set();
+    for (let room in graph[start][1]) {
+      queue = [...queue, [{ [room]: graph[start][1][room] }]];
+    }
+
+    while (queue.length) {
+      let dequeued = queue.shift();
+
+      let last_room = dequeued[dequeued.length - 1];
+
+      for (let exit in last_room) {
+        if (last_room[exit] === target) {
+          if (target === '?') {
+            dequeued.pop();
+          }
+          dequeued.forEach(item => {
+            for (let key in item) {
+              graph[item[key]][0].color = '#d3e5e5';
+            }
+          });
+          return dequeued;
+        } else {
+          visited.add(last_room[exit]);
+
+          for (let path in graph[last_room[exit]][1]) {
+            if (visited.has(graph[last_room[exit]][1][path]) === false) {
+              let path_copy = Array.from(dequeued);
+              path_copy.push({ [path]: graph[last_room[exit]][1][path] });
+
+              queue.push(path_copy);
+            }
+          }
+        }
+      }
+    }
+    return 'That target does not exisit.';
+  };
+
+  getUnknownDirections = () => {
+    let unknownDirections = [];
+    let directions = this.state.graph[this.state.room_id][1];
+    for (let direction in directions) {
+      if (directions[direction] === '?') {
+        unknownDirections.push(direction);
+      }
+    }
+    return unknownDirections;
+  };
+
+  mapCoords = () => {
+    const { graph, room_id } = this.state;
+    const setCoords = [];
+    for (let room in graph) {
+      let data = graph[room][0];
+      // eslint-disable-next-line
+      if (room != room_id) {
+        data.color = '#525959';
+      }
+      setCoords.push(data);
+    }
+    this.setState({ allCoords: setCoords });
+  };
+
+  mapLinks = () => {
+    const { graph } = this.state;
+    const setLinks = [];
+    for (let room in graph) {
+      for (let linkedRoom in graph[room][1]) {
+        setLinks.push([graph[room][0], graph[graph[room][1][linkedRoom]][0]]);
+      }
+    }
+    this.setState({ allLinks: setLinks });
+  };
+
+  parseCoords = coords => {
+    const coordsObject = {};
+    const coordsArr = coords.replace(/[{()}]/g, '').split(',');
+
+    coordsArr.forEach(coord => {
+      coordsObject['x'] = parseInt(coordsArr[0]);
+      coordsObject['y'] = parseInt(coordsArr[1]);
+    });
+
+    return coordsObject;
   };
 
   updateGraph = (id, coords, exits, previous_room_id = null, move = null) => {
@@ -463,36 +468,35 @@ class GraphMap extends Component {
     return graph;
   };
 
-  parseCoords = coords => {
-    const coordsObject = {};
-    const coordsArr = coords.replace(/[{()}]/g, '').split(',');
-
-    coordsArr.forEach(coord => {
-      coordsObject['x'] = parseInt(coordsArr[0]);
-      coordsObject['y'] = parseInt(coordsArr[1]);
-    });
-
-    return coordsObject;
+  updateVisited = () => {
+    // UPDATE PROGRESS
+    let visited = new Set(this.state.set);
+    for (let key in this.state.graph) {
+      if (!visited.has(key)) {
+        let qms = [];
+        for (let direction in key) {
+          if (key[direction] === '?') {
+            qms.push(direction);
+          }
+        }
+        if (!qms.length) {
+          visited.add(key);
+        }
+      }
+    }
+    let progress = Math.round((visited.size / 500) * 100);
+    this.setState({ visited, progress });
   };
 
-  changeName = () => {
-    axios({
-      method: 'post',
-      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/change_name/',
-      headers: {
-        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
-      },
-      data: {
-        name: 'Pirate Ry'
-      }
-    })
-      .then(res => {
-        console.log(res.data);
-      })
-      .catch(err => {
-        console.log('There was an error.');
-        console.dir(err);
-      });
+  // EVENT METHODS
+  manualMove = move => {
+    const { graph, room_id } = this.state;
+
+    if (graph[room_id][1][move] || graph[room_id][1][move] === 0) {
+      this.moveRooms(move, graph[room_id][1][move]);
+    } else {
+      this.setState({ messages: ["You can't go that way."] });
+    }
   };
 
   handleClick = () => {
@@ -500,21 +504,16 @@ class GraphMap extends Component {
     // this.traverseMap();
     // this.moveRooms('w', 1);
     // this.takeTreasure('tiny treasure');
-    // this.travelToShop();
-    this.changeName();
+    this.travelToShop();
+    // this.changeName();
     // this.sellTreasure('treasure');
     // this.exploreMap();
-  };
-
-  handleKeyPress = key => {
-    console.log('do something when key: ' + key + ' is pressed.');
   };
 
   render() {
     const {
       players,
       items,
-      graph,
       coords,
       room_id,
       title,
@@ -528,12 +527,13 @@ class GraphMap extends Component {
       inventory,
       loaded
     } = this.state;
-    let parsed = [];
-    if (coords) {
-      for (let coord in coords) {
-        parsed.push(`${coord}: ${coords[coord]} `);
-      }
-    }
+
+    // let parsed = [];
+    // if (coords) {
+    //   for (let coord in coords) {
+    //     parsed.push(`${coord}: ${coords[coord]} `);
+    //   }
+    // }
     return (
       <StyledGraphMap onKeyPress={this.handleKeyPress}>
         {loaded ? (
@@ -559,6 +559,8 @@ class GraphMap extends Component {
               manualMove={this.manualMove}
               sellTreasure={this.sellTreasure}
               inventory={inventory}
+              takeTreasure={this.takeTreasure}
+              items={items}
             />
           </>
         ) : (
