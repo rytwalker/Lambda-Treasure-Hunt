@@ -12,7 +12,7 @@ class GraphMap extends Component {
     allCoords: [],
     allLinks: [],
     coords: { x: 50, y: 60 },
-    cooldown: 15,
+    cooldown: 2,
     description: '',
     encumbrance: null,
     error: '',
@@ -27,7 +27,6 @@ class GraphMap extends Component {
     loaded: false,
     messages: [],
     name: 'Ryan',
-    path: [],
     players: [],
     progress: 0,
     room_id: 0,
@@ -48,8 +47,7 @@ class GraphMap extends Component {
       let value = JSON.parse(localStorage.getItem('graph'));
       this.setState({ graph: value, graphLoaded: true });
     }
-    this.getLocation();
-    this.getStatus();
+    this.init();
   }
 
   componentDidUpdate(prevState) {
@@ -59,6 +57,12 @@ class GraphMap extends Component {
       setTimeout(() => this.setState({ loaded: true }), 10);
     }
   }
+
+  init = async () => {
+    await this.getLocation();
+    await this.wait(1000 * this.state.cooldown);
+    await this.getStatus();
+  };
 
   // API METHODS
   changeName = () => {
@@ -74,11 +78,71 @@ class GraphMap extends Component {
     })
       .then(res => {
         console.log(res.data);
+        this.setState({ messages: [...res.data.messages] }, () =>
+          this.getStatus()
+        );
       })
       .catch(err => {
         console.log('There was an error.');
         console.dir(err);
       });
+  };
+
+  FlyToRooms = async (move, next_room_id = null) => {
+    let data;
+    if (next_room_id !== null) {
+      data = {
+        direction: move,
+        next_room_id: next_room_id.toString()
+      };
+    } else {
+      data = {
+        direction: move
+      };
+    }
+    try {
+      const response = await axios({
+        method: 'post',
+        url: `https://lambda-treasure-hunt.herokuapp.com/api/adv/fly/`,
+        headers: {
+          Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+        },
+        data
+      });
+
+      let previous_room_id = this.state.room_id;
+
+      //   Update graph
+      let graph = this.updateGraph(
+        response.data.room_id,
+        this.parseCoords(response.data.coordinates),
+        response.data.exits,
+        previous_room_id,
+        move
+      );
+
+      this.setState({
+        room_id: response.data.room_id,
+        coords: this.parseCoords(response.data.coordinates),
+        exits: [...response.data.exits],
+        cooldown: response.data.cooldown,
+        messages: response.data.messages,
+        description: response.data.description,
+        title: response.data.title,
+        players: response.data.players,
+        items: response.data.items,
+        graph
+      });
+      console.log(response.data);
+    } catch (error) {
+      console.log('Something went wrong moving...');
+      console.dir(error);
+      this.setState({
+        cooldown: error.response.data.cooldown,
+        messages: [...error.response.data.errors]
+      });
+      throw error;
+    }
   };
 
   getLocation = () => {
@@ -181,7 +245,6 @@ class GraphMap extends Component {
         room_id: response.data.room_id,
         coords: this.parseCoords(response.data.coordinates),
         exits: [...response.data.exits],
-        path: [...this.state.path, move],
         cooldown: response.data.cooldown,
         messages: response.data.messages,
         description: response.data.description,
@@ -195,6 +258,26 @@ class GraphMap extends Component {
       console.log('Something went wrong moving...');
       console.dir(error);
     }
+  };
+
+  prayToShrine = () => {
+    axios({
+      method: 'post',
+      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/pray/',
+      headers: {
+        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+      }
+    })
+      .then(res => {
+        console.log(res.data);
+        this.setState({ messages: [...res.data.messages] }, () =>
+          this.getStatus()
+        );
+      })
+      .catch(err => {
+        console.log('There was an error.');
+        console.dir(err);
+      });
   };
 
   sellTreasure = name => {
@@ -211,9 +294,10 @@ class GraphMap extends Component {
     })
       .then(res => {
         console.log(res.data);
-        this.setState({ messages: [...res.data.messages] }, () =>
-          this.getStatus()
-        );
+        this.setState({
+          messages: [...res.data.messages],
+          cooldown: res.data.cooldown
+        });
       })
       .catch(err => {
         console.log('There was an error.');
@@ -233,13 +317,18 @@ class GraphMap extends Component {
       }
     })
       .then(res => {
-        this.setState({
-          messages: res.data.messages,
-          items: res.data.items,
-          players: res.data.players
-        });
+        this.setState(
+          {
+            messages: res.data.messages,
+            items: res.data.items,
+            players: res.data.players,
+            cooldown: res.data.cooldown
+          },
+          () => this.wait(1000 * res.data.cooldown)
+        );
         console.log(res.data);
       })
+      .then(() => this.getStatus())
       .catch(err => {
         console.log('There was an error.');
         console.dir(err);
@@ -248,47 +337,50 @@ class GraphMap extends Component {
 
   // AUTOMATED METHODS
   exploreMap = () => {
-    const { graph, room_id } = this.state;
-
+    const { graph, room_id, items } = this.state;
     let exits = [...this.state.exits];
-    // Pick one at random
     let random = Math.floor(Math.random() * exits.length);
-    // Move
-    this.moveRooms(exits[random], graph[room_id][exits[random]])
-      .then(() => {
-        // Check for items
-        if (this.state.items.length) {
-          console.log(this.state.items[0]);
-          setTimeout(() => {
-            this.takeTreasure(this.state.items[0]);
-          }, 1000 * this.state.cooldown);
-        }
-      })
-      .then(() => {
-        setTimeout(this.getStatus, 1000 * this.state.cooldown);
-      })
-      // .then(() => {
-      //   if (this.state.encumbrance > 5) {
-      //     this.travelToShop();
+    let nextRoom = graph[room_id][1][exits[random]];
 
-      //     this.state.items.forEach((item, i) => {
-      //       setTimeout(
-      //         () => this.sellTreasure(item),
-      //         1000 * this.state.cooldown * i + 1
-      //       );
-      //     });
-      //   }
-      // })
-      // .then(() => {
-      //   setTimeout(this.getStatus, 1000 * this.state.cooldown);
-      // })
-      .then(() => {
-        setTimeout(this.exploreMap, 1000 * this.state.cooldown);
+    if (this.state.encumbrance >= 9) {
+      this.travelToShop()
+        .then(() => this.sellAllTreasure())
+        .then(() => this.exploreMap());
+    } else {
+      // Move
+      this.FlyToRooms(exits[random], nextRoom).then(() => {
+        // Check for items
+        console.log(items.length);
+        if (items.length) {
+          console.log('here');
+          this.takeAllTreasures();
+        }
       });
+      // .then(() => {
+      //   setTimeout(this.exploreMap, 1000 * this.state.cooldown);
+      // });
+    }
   };
 
-  travelToShop = () => {
-    let count = 1;
+  sellAllTreasure = async () => {
+    const { inventory, cooldown } = this.state;
+    for (let treasure of inventory) {
+      await this.wait(1000 * cooldown);
+      await this.sellTreasure(treasure);
+      await this.wait(1000 * cooldown);
+      await this.getStatus();
+    }
+  };
+
+  takeAllTreasures = async () => {
+    const { items } = this.state;
+    for (let item of items) {
+      await this.wait(1000 * this.state.cooldown);
+      await this.takeTreasure(item);
+    }
+  };
+
+  travelToShop = async () => {
     const path = this.findShortestPath(this.state.room_id, 1);
     console.log(path);
     if (typeof path === 'string') {
@@ -297,10 +389,8 @@ class GraphMap extends Component {
       for (let direction of path) {
         console.log(direction);
         for (let d in direction) {
-          setTimeout(() => {
-            this.moveRooms(d, direction[d]);
-          }, this.state.cooldown * 1000 * count);
-          count++;
+          await this.wait(1000 * this.state.cooldown);
+          await this.FlyToRooms(d, direction[d]);
         }
       }
     }
@@ -341,7 +431,6 @@ class GraphMap extends Component {
   };
 
   // HELPER MATHODS
-
   findShortestPath = (start = this.state.room_id, target = '?') => {
     let { graph } = this.state;
     let queue = [];
@@ -362,7 +451,7 @@ class GraphMap extends Component {
           }
           dequeued.forEach(item => {
             for (let key in item) {
-              graph[item[key]][0].color = '#d3e5e5';
+              graph[item[key]][0].color = '#9A4F53';
             }
           });
           return dequeued;
@@ -488,79 +577,76 @@ class GraphMap extends Component {
     this.setState({ visited, progress });
   };
 
+  wait = async ms => {
+    return new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
+  };
+
   // EVENT METHODS
   manualMove = move => {
     const { graph, room_id } = this.state;
 
     if (graph[room_id][1][move] || graph[room_id][1][move] === 0) {
-      this.moveRooms(move, graph[room_id][1][move]);
+      this.FlyToRooms(move, graph[room_id][1][move]);
     } else {
       this.setState({ messages: ["You can't go that way."] });
     }
   };
 
   handleClick = () => {
-    // this.setState({ generating: true });
-    // this.traverseMap();
-    // this.moveRooms('w', 1);
-    // this.takeTreasure('tiny treasure');
-    this.travelToShop();
-    // this.changeName();
-    // this.sellTreasure('treasure');
-    // this.exploreMap();
+    // let path = this.findShortestPath(10, 22);
+    // console.log(path);
+    // this.prayToShrine();
+    // this.FlyToRooms('n', 10);
+    this.exploreMap();
   };
 
   render() {
     const {
-      players,
-      items,
       coords,
-      room_id,
-      title,
       description,
-      messages,
-      name,
       encumbrance,
-      strength,
-      speed,
       gold,
       inventory,
-      loaded
+      items,
+      loaded,
+      messages,
+      name,
+      players,
+      room_id,
+      speed,
+      strength,
+      title
     } = this.state;
-
-    // let parsed = [];
-    // if (coords) {
-    //   for (let coord in coords) {
-    //     parsed.push(`${coord}: ${coords[coord]} `);
-    //   }
-    // }
     return (
       <StyledGraphMap onKeyPress={this.handleKeyPress}>
         {loaded ? (
           <>
             <Map coords={this.state.allCoords} links={this.state.allLinks} />
             <Sidebar
-              room_id={room_id}
               coords={coords}
-              title={title}
               description={description}
-              items={items}
-              players={players}
-              name={name}
               encumbrance={encumbrance}
-              strength={strength}
-              speed={speed}
               gold={gold}
               inventory={inventory}
+              items={items}
+              name={name}
+              players={players}
+              room_id={room_id}
+              speed={speed}
+              strength={strength}
+              title={title}
             />
             <Bottombar
-              onclick={this.handleClick}
-              messages={messages}
-              manualMove={this.manualMove}
-              sellTreasure={this.sellTreasure}
               inventory={inventory}
-              takeTreasure={this.takeTreasure}
               items={items}
+              manualMove={this.manualMove}
+              messages={messages}
+              onclick={this.handleClick}
+              sellTreasure={this.sellAllTreasure}
+              takeTreasure={this.takeAllTreasures}
+              travelToShop={this.travelToShop}
             />
           </>
         ) : (

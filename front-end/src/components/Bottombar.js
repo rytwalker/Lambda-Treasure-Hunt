@@ -9,14 +9,10 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 class Bottombar extends Component {
-  handleClick = move => {
-    const { manualMove, sellTreasure } = this.props;
-    if (move) {
-      manualMove(move);
-    }
-  };
+  handleManualMove = move => this.props.manualMove(move);
   handleSellTreasure = () => this.props.sellTreasure(this.props.inventory[0]);
   handleTakeTreasure = () => this.props.takeTreasure(this.props.items[0]);
+  handleTravelToShop = () => this.props.travelToShop();
 
   render() {
     const { onclick, messages } = this.props;
@@ -31,19 +27,31 @@ class Bottombar extends Component {
           )}
         </div>
         <div className="buttons">
-          <div className="manual-button" onClick={() => this.handleClick('n')}>
+          <div
+            className="manual-button"
+            onClick={() => this.handleManualMove('n')}
+          >
             N
           </div>
-          <div className="manual-button" onClick={() => this.handleClick('s')}>
+          <div
+            className="manual-button"
+            onClick={() => this.handleManualMove('s')}
+          >
             S
           </div>
-          <div className="manual-button" onClick={() => this.handleClick('w')}>
+          <div
+            className="manual-button"
+            onClick={() => this.handleManualMove('w')}
+          >
             W
           </div>
-          <div className="manual-button" onClick={() => this.handleClick('e')}>
+          <div
+            className="manual-button"
+            onClick={() => this.handleManualMove('e')}
+          >
             E
           </div>
-          <div className="manual-button">
+          <div className="manual-button" onClick={this.handleTravelToShop}>
             <FontAwesomeIcon icon={faStore} />
           </div>
           <div className="manual-button" onClick={this.handleSellTreasure}>
