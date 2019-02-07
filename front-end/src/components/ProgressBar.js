@@ -7,7 +7,7 @@ const ProgressBar = ({ progress }) => {
       <div className="progress-bar">
         <div
           style={{
-            width: `${progress}%`,
+            width: `100%`,
             height: '100%',
             background: '#7dcdbe',
             transition: 'width .2s ease-in-out'
@@ -29,8 +29,8 @@ const ProgressBar = ({ progress }) => {
 const StyledProgressBar = styled.div`
   margin-top: 2rem;
   .progress-bar {
-    height: 20px;
-    width: 289px;
+    height: 15px;
+    width: 100%;
     border-radius: 10px;
     border: 2px solid #7dcdbe;
     background: #f5f5f5;

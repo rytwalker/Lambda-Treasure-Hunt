@@ -1,10 +1,12 @@
 import React, { Component } from 'react';
 import axios from 'axios';
 import styled from 'styled-components';
+// import KeyboardEventHandler from 'react-keyboard-event-handler';
 // import logo from '../images/logo.png';
 // import ProgressBar from './ProgressBar';
 import data from '../data.json';
 import Map from './Map';
+import Loading from './Loading';
 import Sidebar from './Sidebar';
 import Bottombar from './Bottombar.js';
 
@@ -25,6 +27,7 @@ class GraphMap extends Component {
     graphLoaded: false,
     inventory: [],
     inverse: { n: 's', s: 'n', w: 'e', e: 'w' },
+    loaded: false,
     messages: [],
     name: 'Ryan',
     path: [],
@@ -54,6 +57,7 @@ class GraphMap extends Component {
     if (!this.state.allCoords.length && this.state.graph) {
       this.mapLinks();
       this.mapCoords();
+      setTimeout(() => this.setState({ loaded: true }), 10);
     }
   }
 
@@ -96,8 +100,7 @@ class GraphMap extends Component {
           gold: res.data.gold,
           inventory: [...res.data.inventory],
           status: [...res.data.status],
-          errors: [...res.data.errors],
-          messages: [...res.data.messages]
+          errors: [...res.data.errors]
         }));
       })
       .catch(err => {
@@ -120,6 +123,9 @@ class GraphMap extends Component {
     })
       .then(res => {
         console.log(res.data);
+        this.setState({ messages: [...res.data.messages] }, () =>
+          this.getStatus()
+        );
       })
       .catch(err => {
         console.log('There was an error.');
@@ -153,10 +159,15 @@ class GraphMap extends Component {
   };
 
   mapCoords = () => {
-    const { graph } = this.state;
+    const { graph, room_id } = this.state;
     const setCoords = [];
     for (let room in graph) {
-      setCoords.push(graph[room][0]);
+      let data = graph[room][0];
+      // eslint-disable-next-line
+      if (room != room_id) {
+        data.color = '#525959';
+      }
+      setCoords.push(data);
     }
     this.setState({ allCoords: setCoords });
   };
@@ -284,6 +295,11 @@ class GraphMap extends Component {
           if (target === '?') {
             dequeued.pop();
           }
+          dequeued.forEach(item => {
+            for (let key in item) {
+              graph[item[key]][0].color = '#d3e5e5';
+            }
+          });
           return dequeued;
         } else {
           visited.add(last_room[exit]);
@@ -311,6 +327,16 @@ class GraphMap extends Component {
       }
     }
     return unknownDirections;
+  };
+
+  manualMove = move => {
+    const { graph, room_id } = this.state;
+
+    if (graph[room_id][1][move] || graph[room_id][1][move] === 0) {
+      this.moveRooms(move, graph[room_id][1][move]);
+    } else {
+      this.setState({ messages: ["You can't go that way."] });
+    }
   };
 
   moveRooms = async (move, next_room_id = null) => {
@@ -384,6 +410,7 @@ class GraphMap extends Component {
         this.setState(prevState => ({
           room_id: res.data.room_id,
           coords: this.parseCoords(res.data.coordinates),
+          cooldown: res.status.cooldown,
           exits: [...res.data.exits],
           description: res.data.description,
           title: res.data.title,
@@ -424,6 +451,13 @@ class GraphMap extends Component {
       graph[previous_room_id][1][move] = id;
       graph[id][1][inverse[move]] = previous_room_id;
     }
+    if (previous_room_id !== null) {
+      graph[previous_room_id][0].color = '#525959';
+      graph[id][0].color = '#7dcdbe';
+    } else {
+      graph[0][0].color = '#525959';
+      graph[id][0].color = '#7dcdbe';
+    }
 
     localStorage.setItem('graph', JSON.stringify(graph));
     return graph;
@@ -441,15 +475,41 @@ class GraphMap extends Component {
     return coordsObject;
   };
 
+  changeName = () => {
+    axios({
+      method: 'post',
+      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/change_name/',
+      headers: {
+        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+      },
+      data: {
+        name: 'Pirate Ry'
+      }
+    })
+      .then(res => {
+        console.log(res.data);
+      })
+      .catch(err => {
+        console.log('There was an error.');
+        console.dir(err);
+      });
+  };
+
   handleClick = () => {
     // this.setState({ generating: true });
     // this.traverseMap();
     // this.moveRooms('w', 1);
     // this.takeTreasure('tiny treasure');
     // this.travelToShop();
-    this.sellTreasure('treasure');
+    this.changeName();
+    // this.sellTreasure('treasure');
     // this.exploreMap();
   };
+
+  handleKeyPress = key => {
+    console.log('do something when key: ' + key + ' is pressed.');
+  };
+
   render() {
     const {
       players,
@@ -465,7 +525,8 @@ class GraphMap extends Component {
       strength,
       speed,
       gold,
-      inventory
+      inventory,
+      loaded
     } = this.state;
     let parsed = [];
     if (coords) {
@@ -474,29 +535,38 @@ class GraphMap extends Component {
       }
     }
     return (
-      <StyledGraphMap>
-        {graph ? (
-          <Map coords={this.state.allCoords} links={this.state.allLinks} />
+      <StyledGraphMap onKeyPress={this.handleKeyPress}>
+        {loaded ? (
+          <>
+            <Map coords={this.state.allCoords} links={this.state.allLinks} />
+            <Sidebar
+              room_id={room_id}
+              coords={coords}
+              title={title}
+              description={description}
+              items={items}
+              players={players}
+              name={name}
+              encumbrance={encumbrance}
+              strength={strength}
+              speed={speed}
+              gold={gold}
+              inventory={inventory}
+            />
+            <Bottombar
+              onclick={this.handleClick}
+              messages={messages}
+              manualMove={this.manualMove}
+              sellTreasure={this.sellTreasure}
+              inventory={inventory}
+            />
+          </>
         ) : (
-          <div>Loading</div>
+          <Loading />
         )}
-        <Sidebar
-          room_id={room_id}
-          coords={coords}
-          title={title}
-          description={description}
-          items={items}
-          players={players}
-          name={name}
-          encumbrance={encumbrance}
-          strength={strength}
-          speed={speed}
-          gold={gold}
-          inventory={inventory}
-        />
-        <Bottombar onclick={this.handleClick} messages={messages} />
+
         {/*
-        <ProgressBar progress={progress} /> */}
+          <ProgressBar progress={progress} /> */}
       </StyledGraphMap>
     );
   }

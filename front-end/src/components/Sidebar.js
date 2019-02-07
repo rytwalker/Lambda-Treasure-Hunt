@@ -62,7 +62,9 @@ const Sidebar = ({
             <li>
               Speed: <span>{speed}</span>
             </li>
-            <li>
+          </ul>
+          <ul>
+            <li className="inventory">
               Inventory:{' '}
               <span>
                 {!inventory.length ? (
@@ -84,10 +86,6 @@ const Sidebar = ({
 const StyledSidebar = styled.div`
   width: 25%;
   height: 100%;
-  position: fixed;
-  top: calc(0 - 60px);
-  right: 0;
-  margin-top: 60px;
   display: flex;
   flex-direction: column;
   background: #d3e5e5;
@@ -148,8 +146,11 @@ const StyledSidebar = styled.div`
       }
     }
     .player-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
       ul {
-        width: 60%;
+        width: 45%;
         li {
           display: flex;
           justify-content: space-between;
@@ -158,6 +159,9 @@ const StyledSidebar = styled.div`
             font-weight: 700;
             color: #d3e5e5;
           }
+        }
+        .inventory {
+          flex-direction: column;
         }
       }
     }
