@@ -9,12 +9,16 @@ This component displays most of the information retrieved from the API.
 */
 
 const Sidebar = ({
+  clickedDescription,
+  clickedTitle,
   coords,
   encumbrance,
   description,
   examine,
   gold,
+  handleClickable,
   inventory,
+  isClicked,
   items,
   players,
   name,
@@ -32,8 +36,11 @@ const Sidebar = ({
         </h2>
 
         <div className="room-info info">
-          <h3>{title}</h3>
-          <p>{description}</p>
+          <h3>{isClicked ? clickedTitle : title}</h3>
+          <p>{isClicked ? clickedDescription : description}</p>
+          <p onClick={() => handleClickable()} className="back-button">
+            {isClicked ? 'back' : null}
+          </p>
         </div>
         <div className="info">
           <h3>Items</h3>
@@ -87,6 +94,10 @@ const Sidebar = ({
             <li>
               Speed: <span>{speed}</span>
             </li>
+            <li>
+              <input type="text" className="secret-input" />
+              <button>+</button>
+            </li>
           </ul>
           <ul>
             <li className="inventory">
@@ -136,7 +147,9 @@ const StyledSidebar = styled.div`
 
   .room {
     padding: 2rem;
-    flex: 1;
+    ${'' /* flex: 1; */}
+    height: 55%;
+    overflow: auto;
 
     .room-id {
       font-size: 2.4rem;
@@ -159,7 +172,13 @@ const StyledSidebar = styled.div`
         font-size: 1.4rem;
       }
 
-      .room-clickable {
+      .back-button {
+        ${'' /* width: 50px; */}
+        display: inline;
+      }
+
+      .room-clickable,
+      .back-button {
         border-bottom: 3px solid #7dcdbe;
         transition: all 0.2s;
         cursor: pointer;
@@ -177,7 +196,7 @@ const StyledSidebar = styled.div`
   }
   .player {
     background: #7dcdbe;
-    height: 50%;
+    height: 45%;
     width: 100%;
     padding: 2rem;
     .player-id {
@@ -210,6 +229,25 @@ const StyledSidebar = styled.div`
           display: flex;
           justify-content: space-between;
           font-size: 1.8rem;
+          .secret-input {
+            background: #7dcdbe;
+            border: none;
+            width: 50px;
+            padding: 0 0.5rem;
+            color: #f5f5f5;
+            font-weight: 700;
+            &:focus {
+              border: 3px solid #d3e5e5;
+              outline: none;
+            }
+          }
+          button {
+            border: none;
+            background: #7dcdbe;
+            cursor: pointer;
+            color: #f5f5f5;
+            font-weight: 700;
+          }
           span {
             font-weight: 700;
             color: #d3e5e5;

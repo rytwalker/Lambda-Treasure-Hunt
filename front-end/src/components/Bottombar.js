@@ -20,15 +20,24 @@ class Bottombar extends Component {
 
   render() {
     const { isExploring, messages, onclick } = this.props;
-
     return (
       <StyledBottombar>
         <Button onclick={onclick} isExploring={isExploring} />
-        <div className="message">
+        <div
+          className="message"
+          style={messages.length >= 4 ? { fontSize: '1.8rem' } : null}
+        >
           {!messages.length ? (
             <p>{'Click EXPLORE to start exploring.'}</p>
           ) : (
-            messages.map(message => <span key={message}>{message} </span>)
+            messages.map(message => (
+              <span
+                style={messages.length >= 4 ? { fontSize: '1.8rem' } : null}
+                key={message}
+              >
+                {message}{' '}
+              </span>
+            ))
           )}
         </div>
         <div className="buttons">

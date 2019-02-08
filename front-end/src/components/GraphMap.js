@@ -16,7 +16,7 @@ class GraphMap extends Component {
     allCoords: [],
     allLinks: [],
     clickedDescription: '',
-    clickedName: '',
+    clickedTitle: '',
     coords: { x: 50, y: 60 },
     cooldown: 2,
     description: '',
@@ -24,6 +24,7 @@ class GraphMap extends Component {
     error: '',
     exits: [],
     items: [],
+    isClicked: false,
     isExploring: false,
     generating: false,
     gold: null,
@@ -157,9 +158,10 @@ class GraphMap extends Component {
       .then(res => {
         console.log(res.data);
         this.setState({
-          clickedName: res.data.name,
+          clickedTitle: res.data.name,
           clickedDescription: res.data.description,
-          cooldown: res.data.cooldown
+          cooldown: res.data.cooldown,
+          isClicked: true
         });
       })
       .catch(err => {
@@ -379,8 +381,9 @@ class GraphMap extends Component {
           {
             messages: [...res.data.messages],
             cooldown: res.data.cooldown
-          },
-          () => this.wait(1000 * res.data.cooldown).then(() => this.getStatus())
+          }
+          // () =>
+          //   this.wait(1500 * this.state.cooldown).then(() => this.getStatus())
         );
       })
       .catch(err => {
@@ -459,6 +462,7 @@ class GraphMap extends Component {
       await this.sellTreasure(treasure);
     }
     await this.wait(1000 * cooldown);
+    this.getStatus();
   };
 
   /* 
@@ -763,6 +767,7 @@ class GraphMap extends Component {
     const { isExploring } = this.state;
     // this.prayToShrine();
     // this.getStatus();
+    // this.travelToNode(461);
     if (isExploring) {
       this.setState({
         isExploring: false,
@@ -775,14 +780,19 @@ class GraphMap extends Component {
     }
   };
 
+  handleClickable = () => this.setState({ isClicked: false });
+
   render() {
     const {
+      clickedDescription,
+      clickedTitle,
       coords,
       description,
       encumbrance,
       gold,
       graph,
       inventory,
+      isClicked,
       isExploring,
       items,
       loaded,
@@ -793,7 +803,8 @@ class GraphMap extends Component {
       room_id,
       speed,
       strength,
-      title
+      title,
+      travelToNode
     } = this.state;
     return (
       <StyledGraphMap onKeyPress={this.handleKeyPress}>
@@ -806,12 +817,16 @@ class GraphMap extends Component {
               travelToNode={this.travelToNode}
             />
             <Sidebar
+              clickedDescription={clickedDescription}
+              clickedTitle={clickedTitle}
               coords={coords}
               description={description}
               encumbrance={encumbrance}
               examine={this.examine}
               gold={gold}
+              handleClickable={this.handleClickable}
               inventory={inventory}
+              isClicked={isClicked}
               items={items}
               name={name}
               players={players}
@@ -819,6 +834,7 @@ class GraphMap extends Component {
               speed={speed}
               strength={strength}
               title={title}
+              travelToNode={travelToNode}
             />
             <Bottombar
               inventory={inventory}
