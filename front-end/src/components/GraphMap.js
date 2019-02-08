@@ -7,6 +7,10 @@ import Loading from './Loading';
 import Sidebar from './Sidebar';
 import Bottombar from './Bottombar.js';
 
+/*
+This is where all the logic is stored for the App. 
+*/
+
 class GraphMap extends Component {
   state = {
     allCoords: [],
@@ -63,6 +67,9 @@ class GraphMap extends Component {
     }
   }
 
+  // Init methods
+
+  // used to update the loading bar
   updateProgress = async (ms = 10) => {
     while (this.state.progress <= 100) {
       await this.setState(prevState => ({
@@ -72,13 +79,14 @@ class GraphMap extends Component {
     }
   };
 
+  // inits player location and status
   init = async () => {
     await this.getLocation();
     await this.wait(1000 * this.state.cooldown);
     await this.getStatus();
   };
 
-  // API METHODS
+  // API METHODS (The name describes what they do)
   changeName = () => {
     axios({
       method: 'post',
@@ -414,6 +422,10 @@ class GraphMap extends Component {
   };
 
   // AUTOMATED METHODS
+
+  /* 
+    This my looping function. It searches for treasure and picks it up when it finds it. When encumbrance gets too high, it returns to the shop to sell items, then returns to finding treasure.
+  */
   exploreMap = async () => {
     const { cooldown, graph, isExploring, room_id, items } = this.state;
 
@@ -437,6 +449,9 @@ class GraphMap extends Component {
     }
   };
 
+  /* 
+    This automates selling multiple treasures to the store.
+  */
   sellAllTreasure = async () => {
     const { inventory, cooldown } = this.state;
     for (let treasure of inventory) {
@@ -446,6 +461,9 @@ class GraphMap extends Component {
     await this.wait(1000 * cooldown);
   };
 
+  /* 
+    This actually only takes one treasure, getting multiple from a room is in the explore logic. Will update.
+  */
   takeAllTreasures = async () => {
     const { items, cooldown } = this.state;
     await this.wait(1000 * cooldown);
@@ -453,6 +471,9 @@ class GraphMap extends Component {
     await this.wait(1000 * cooldown);
   };
 
+  /* 
+    Finds the shortest path to the shop and then moves there.
+  */
   travelToShop = async () => {
     const path = this.findShortestPath(this.state.room_id, 1);
     console.log(path);
@@ -469,6 +490,9 @@ class GraphMap extends Component {
     }
   };
 
+  /* 
+    This was my traversal logic to populate the graph. I want to insert part of this back into my Explore method to account for new connections. On the to-do list.
+  */
   traverseMap = () => {
     let count = 1;
     let unknownDirections = this.getUnknownDirections();
@@ -504,6 +528,10 @@ class GraphMap extends Component {
   };
 
   // HELPER MATHODS
+
+  /* 
+    Breadth First Search algorithm to find the shortest path.
+  */
   findShortestPath = (start = this.state.room_id, target = '?') => {
     let { graph } = this.state;
     let queue = [];
@@ -545,6 +573,9 @@ class GraphMap extends Component {
     return 'That target does not exisit.';
   };
 
+  /* 
+    Gets directions unknown to node in graph
+  */
   getUnknownDirections = () => {
     let unknownDirections = [];
     let directions = this.state.graph[this.state.room_id][1];
@@ -556,6 +587,9 @@ class GraphMap extends Component {
     return unknownDirections;
   };
 
+  /* 
+  This takes the graph data and puts the necessary info into an array to be used by the map component.
+  */
   mapCoords = () => {
     const { graph, room_id } = this.state;
     const setCoords = [];
@@ -570,6 +604,9 @@ class GraphMap extends Component {
     this.setState({ allCoords: setCoords });
   };
 
+  /* 
+  This takes the graph data and puts the necessary info into an array to be used by the map component for the edges.
+  */
   mapLinks = () => {
     const { graph } = this.state;
     const setLinks = [];
@@ -581,6 +618,9 @@ class GraphMap extends Component {
     this.setState({ allLinks: setLinks });
   };
 
+  /* 
+  Gets the correct format for coords from the graph data.
+  */
   parseCoords = coords => {
     const coordsObject = {};
     const coordsArr = coords.replace(/[{()}]/g, '').split(',');
@@ -593,6 +633,9 @@ class GraphMap extends Component {
     return coordsObject;
   };
 
+  /* 
+  This handles updating the graph at any point when it changes including color things.
+  */
   updateGraph = (id, coords, exits, previous_room_id = null, move = null) => {
     const { inverse } = this.state;
 
@@ -629,7 +672,9 @@ class GraphMap extends Component {
     localStorage.setItem('graph', JSON.stringify(graph));
     return graph;
   };
-
+  /* 
+  A method that kept track of how many graph nodes were fully explored.
+  */
   updateVisited = () => {
     // UPDATE PROGRESS
     let visited = new Set(this.state.set);
@@ -650,6 +695,9 @@ class GraphMap extends Component {
     this.setState({ visited, progress });
   };
 
+  /* 
+  A life saver! This wraps setTimeout in a promise turning it into and async function
+  */
   wait = async ms => {
     return new Promise(resolve => {
       setTimeout(resolve, ms);
@@ -689,6 +737,9 @@ class GraphMap extends Component {
   //   }
   // };
 
+  /* 
+  Finds the shortest path to a node clicked on and travels there.
+  */
   travelToNode = async node => {
     const path = this.findShortestPath(this.state.room_id, node);
     console.log(path);
@@ -705,6 +756,9 @@ class GraphMap extends Component {
     }
   };
 
+  /* 
+  The logic for handling the init and stopping of the Explore function.
+  */
   handleClick = () => {
     const { isExploring } = this.state;
     // this.prayToShrine();
@@ -781,9 +835,6 @@ class GraphMap extends Component {
         ) : (
           <Loading progress={progress} />
         )}
-
-        {/*
-          <ProgressBar progress={progress} /> */}
       </StyledGraphMap>
     );
   }

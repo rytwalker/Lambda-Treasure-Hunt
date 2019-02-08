@@ -27,7 +27,7 @@ class Map extends Component {
             className="mark-series-example"
             strokeWidth={2}
             opacity="1"
-            size="3"
+            size="4"
             colorType="literal"
             data={coords}
             style={{ cursor: 'pointer', transition: 'all .2s' }}
@@ -43,6 +43,7 @@ class Map extends Component {
                 }
               }
             }}
+            // Show the id of the moused over node in the UI
             onValueMouseOver={datapoint => {
               for (let key in graph) {
                 if (

@@ -8,6 +8,10 @@ import {
 import styled, { keyframes } from 'styled-components';
 import Button from './Button';
 
+/*
+The Bottombar is the interactive part of the UI. Clicking on the explore button will automatically start a random traversal through out the map. There are also commands that control manual movement and API calls.
+*/
+
 class Bottombar extends Component {
   handleManualMove = move => this.props.manualMove(move);
   handleSellTreasure = () => this.props.sellTreasure();
