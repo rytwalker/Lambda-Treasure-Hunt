@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import axios from 'axios';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import data from '../data.json';
 import Map from './Map';
 import Loading from './Loading';
@@ -63,10 +63,12 @@ class GraphMap extends Component {
     }
   }
 
-  updateProgress = async () => {
+  updateProgress = async (ms = 10) => {
     while (this.state.progress <= 100) {
-      await this.setState({ progress: (this.state.progress += 1) });
-      await this.wait(10);
+      await this.setState(prevState => ({
+        progress: (prevState.progress += 1)
+      }));
+      await this.wait(ms);
     }
   };
 
@@ -92,6 +94,39 @@ class GraphMap extends Component {
         console.log(res.data);
         this.setState({ messages: [...res.data.messages] }, () =>
           this.wait(1000 * res.data.cooldown).then(() => this.getStatus())
+        );
+      })
+      .catch(err => {
+        console.log('There was an error.');
+        console.dir(err);
+      });
+  };
+
+  dash = (direction, num_rooms, next_room_ids) => {
+    axios({
+      method: 'post',
+      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/dash/',
+      headers: {
+        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+      },
+      data: {
+        direction,
+        num_rooms,
+        next_room_ids
+      }
+    })
+      .then(res => {
+        console.log(res.data);
+        this.setState(
+          {
+            messages: [...res.data.messages],
+            cooldown: res.data.cooldown,
+            room_id: res.data.room_id,
+            description: res.data.description,
+            players: [...res.data.players],
+            items: [...res.data.items]
+          },
+          () => this.wait(1000 * res.data.cooldown).then(() => this.getStatus())
         );
       })
       .catch(err => {
@@ -632,14 +667,36 @@ class GraphMap extends Component {
     }
   };
 
+  // DASH... Figuring it out
+  // dashToNode = async node => {
+  //   const path = this.findShortestPath(this.state.room_id, node);
+  //   console.log(path);
+  //   if (typeof path === 'string') {
+  //     console.log(path);
+  //   } else {
+  //     console.log('path');
+  //     let arr = [];
+  //     let string;
+
+  //     for (let direction of path) {
+  //       for (let d in direction) {
+  //         arr.push(direction[d]);
+  //         string = arr.join(',');
+  //         console.log(string);
+  //       }
+  //     }
+  //     this.dash('s', arr.length.toString(), string);
+  //   }
+  // };
+
   travelToNode = async node => {
     const path = this.findShortestPath(this.state.room_id, node);
     console.log(path);
     if (typeof path === 'string') {
       console.log(path);
     } else {
+      console.log('path');
       for (let direction of path) {
-        console.log(direction);
         for (let d in direction) {
           await this.wait(1000 * this.state.cooldown);
           await this.FlyToRooms(d, direction[d]);
@@ -650,6 +707,8 @@ class GraphMap extends Component {
 
   handleClick = () => {
     const { isExploring } = this.state;
+    // this.prayToShrine();
+    // this.getStatus();
     if (isExploring) {
       this.setState({
         isExploring: false,
@@ -730,10 +789,21 @@ class GraphMap extends Component {
   }
 }
 
+const fadeIn = keyframes`
+   from {
+     opacity: 0
+   }
+
+   to {
+     opacity: 1
+   }
+ `;
+
 const StyledGraphMap = styled.div`
   display: flex;
   height: calc(100vh - 120px);
   align-items: center;
+  animation: ${fadeIn} 1s ease-in-out;
   ${'' /* justify-content: center; */}
   flex-wrap: wrap;
   ${'' /* flex-direction: column; */}

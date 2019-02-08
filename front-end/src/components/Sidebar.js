@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import ProgressBar from './ProgressBar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDollarSign } from '@fortawesome/free-solid-svg-icons';
@@ -110,12 +110,23 @@ const Sidebar = ({
   );
 };
 
+const fadeIn = keyframes`
+   from {
+     opacity: 0
+   }
+
+   to {
+     opacity: 1
+   }
+ `;
+
 const StyledSidebar = styled.div`
   width: 25%;
   height: 100%;
   display: flex;
   flex-direction: column;
   background: #d3e5e5;
+  animation: ${fadeIn} 1s ease-in-out;
 
   .room {
     padding: 2rem;

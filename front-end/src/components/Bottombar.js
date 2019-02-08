@@ -5,7 +5,7 @@ import {
   faStore,
   faDollarSign
 } from '@fortawesome/free-solid-svg-icons';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import Button from './Button';
 
 class Bottombar extends Component {
@@ -67,15 +67,16 @@ class Bottombar extends Component {
   }
 }
 
-// const flash = keyframes`
-//   from {
-//     background: #000;
-//   }
+// STYLES
+const fadeIn = keyframes`
+   from {
+     opacity: 0
+   }
 
-//   to {
-//     background: #fff;
-//   }
-// `;
+   to {
+     opacity: 1
+   }
+ `;
 
 const StyledBottombar = styled.div`
   width: 100%;
@@ -83,17 +84,15 @@ const StyledBottombar = styled.div`
   height: 60px;
   display: flex;
   align-items: center;
+  animation: ${fadeIn} 1s ease-in-out;
 
   .message {
-    ${'' /* margin-left: 5rem; */}
     margin: auto;
     font-size: 2rem;
     font-weight: 700;
-    ${'' /* height: 100%; */}
-    ${'' /* width: 100%; */}
-    ${'' /* text-align: center; */}
-    ${'' /* margin: auto; */}
-    ${'' /* animation: ${flash} 2s linear; */}
+    span {
+      animation: ${fadeIn} 0.3s ease-in-out;
+    }
   }
 
   .buttons {
@@ -124,4 +123,5 @@ const StyledBottombar = styled.div`
     }
   }
 `;
+
 export default Bottombar;
