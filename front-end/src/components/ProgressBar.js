@@ -7,7 +7,7 @@ const ProgressBar = ({ progress, sidebar }) => {
       <div className="progress-bar">
         <div
           style={{
-            width: `100%`,
+            width: `${progress}%`,
             height: '100%',
             transition: 'width .2s ease-in-out'
           }}

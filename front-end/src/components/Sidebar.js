@@ -5,18 +5,19 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDollarSign } from '@fortawesome/free-solid-svg-icons';
 
 const Sidebar = ({
-  room_id,
   coords,
-  title,
+  encumbrance,
   description,
+  examine,
+  gold,
+  inventory,
   items,
   players,
   name,
-  encumbrance,
-  strength,
+  room_id,
   speed,
-  gold,
-  inventory
+  strength,
+  title
 }) => {
   return (
     <StyledSidebar>
@@ -35,7 +36,15 @@ const Sidebar = ({
           {!items.length ? (
             <p>There are no items in this room.</p>
           ) : (
-            items.map(item => <span key={item + Math.random()}>{item} </span>)
+            items.map(item => (
+              <span
+                className="room-clickable"
+                onClick={() => examine(item)}
+                key={item + Math.random()}
+              >
+                {item}{' '}
+              </span>
+            ))
           )}
         </div>
         <div className="info">
@@ -43,7 +52,15 @@ const Sidebar = ({
           {!players.length ? (
             <p>There are no players in this room.</p>
           ) : (
-            players.map(player => <span key={player}>{player} </span>)
+            players.map(player => (
+              <span
+                className="room-clickable"
+                onClick={() => examine(player)}
+                key={player}
+              >
+                {player}{' '}
+              </span>
+            ))
           )}
         </div>
       </div>
@@ -75,7 +92,13 @@ const Sidebar = ({
                   <p>Empty.</p>
                 ) : (
                   inventory.map(item => (
-                    <span key={item + Math.random()}>{item} </span>
+                    <span
+                      className="inventory-item"
+                      onClick={() => examine(item)}
+                      key={item + Math.random()}
+                    >
+                      {item}{' '}
+                    </span>
                   ))
                 )}
               </span>
@@ -118,6 +141,16 @@ const StyledSidebar = styled.div`
         margin-bottom: 1rem;
         font-size: 1.4rem;
       }
+
+      .room-clickable {
+        border-bottom: 3px solid #7dcdbe;
+        transition: all 0.2s;
+        cursor: pointer;
+        &:hover {
+          background: #7dcdbe;
+          color: #f5f5f5;
+        }
+      }
     }
     .room-info {
       h3 {
@@ -127,7 +160,7 @@ const StyledSidebar = styled.div`
   }
   .player {
     background: #7dcdbe;
-    height: 40%;
+    height: 50%;
     width: 100%;
     padding: 2rem;
     .player-id {
@@ -167,6 +200,23 @@ const StyledSidebar = styled.div`
         }
         .inventory {
           flex-direction: column;
+          .inventory-item {
+            display: block;
+            font-size: 1.2rem;
+            background: #3b3f3f;
+            padding: 0.5rem;
+            border-radius: 5px;
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+            &:hover {
+              background: #d3e5e5;
+              color: #3b3f3f;
+            }
+            &:not(:last-child) {
+              margin-bottom: 0.75rem;
+            }
+          }
         }
       }
     }

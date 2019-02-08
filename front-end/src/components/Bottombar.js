@@ -1,24 +1,25 @@
 import React, { Component } from 'react';
-import styled from 'styled-components';
-import Button from './Button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faHandHolding,
   faStore,
   faDollarSign
 } from '@fortawesome/free-solid-svg-icons';
+import styled from 'styled-components';
+import Button from './Button';
 
 class Bottombar extends Component {
   handleManualMove = move => this.props.manualMove(move);
-  handleSellTreasure = () => this.props.sellTreasure(this.props.inventory[0]);
-  handleTakeTreasure = () => this.props.takeTreasure(this.props.items[0]);
+  handleSellTreasure = () => this.props.sellTreasure();
+  handleTakeTreasure = () => this.props.takeTreasure();
   handleTravelToShop = () => this.props.travelToShop();
 
   render() {
-    const { onclick, messages } = this.props;
+    const { isExploring, messages, onclick } = this.props;
+
     return (
       <StyledBottombar>
-        <Button onclick={onclick} />
+        <Button onclick={onclick} isExploring={isExploring} />
         <div className="message">
           {!messages.length ? (
             <p>{'Click EXPLORE to start exploring.'}</p>
@@ -66,6 +67,16 @@ class Bottombar extends Component {
   }
 }
 
+// const flash = keyframes`
+//   from {
+//     background: #000;
+//   }
+
+//   to {
+//     background: #fff;
+//   }
+// `;
+
 const StyledBottombar = styled.div`
   width: 100%;
   background: #ddd;
@@ -78,6 +89,11 @@ const StyledBottombar = styled.div`
     margin: auto;
     font-size: 2rem;
     font-weight: 700;
+    ${'' /* height: 100%; */}
+    ${'' /* width: 100%; */}
+    ${'' /* text-align: center; */}
+    ${'' /* margin: auto; */}
+    ${'' /* animation: ${flash} 2s linear; */}
   }
 
   .buttons {

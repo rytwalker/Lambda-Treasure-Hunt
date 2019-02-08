@@ -11,6 +11,8 @@ class GraphMap extends Component {
   state = {
     allCoords: [],
     allLinks: [],
+    clickedDescription: '',
+    clickedName: '',
     coords: { x: 50, y: 60 },
     cooldown: 2,
     description: '',
@@ -18,6 +20,7 @@ class GraphMap extends Component {
     error: '',
     exits: [],
     items: [],
+    isExploring: false,
     generating: false,
     gold: null,
     graph: {},
@@ -54,9 +57,18 @@ class GraphMap extends Component {
     if (!this.state.allCoords.length && this.state.graph) {
       this.mapLinks();
       this.mapCoords();
-      setTimeout(() => this.setState({ loaded: true }), 10);
+      this.updateProgress();
+      console.log(this.state.progress);
+      setTimeout(() => this.setState({ loaded: true }), 3000);
     }
   }
+
+  updateProgress = async () => {
+    while (this.state.progress <= 100) {
+      await this.setState({ progress: (this.state.progress += 1) });
+      await this.wait(10);
+    }
+  };
 
   init = async () => {
     await this.getLocation();
@@ -79,8 +91,33 @@ class GraphMap extends Component {
       .then(res => {
         console.log(res.data);
         this.setState({ messages: [...res.data.messages] }, () =>
-          this.getStatus()
+          this.wait(1000 * res.data.cooldown).then(() => this.getStatus())
         );
+      })
+      .catch(err => {
+        console.log('There was an error.');
+        console.dir(err);
+      });
+  };
+
+  examine = name => {
+    axios({
+      method: 'post',
+      url: 'https://lambda-treasure-hunt.herokuapp.com/api/adv/examine/',
+      headers: {
+        Authorization: 'Token 895925acf149cba29f6a4c23d85ec0e47d614cdb'
+      },
+      data: {
+        name
+      }
+    })
+      .then(res => {
+        console.log(res.data);
+        this.setState({
+          clickedName: res.data.name,
+          clickedDescription: res.data.description,
+          cooldown: res.data.cooldown
+        });
       })
       .catch(err => {
         console.log('There was an error.');
@@ -126,11 +163,11 @@ class GraphMap extends Component {
         coords: this.parseCoords(response.data.coordinates),
         exits: [...response.data.exits],
         cooldown: response.data.cooldown,
-        messages: response.data.messages,
+        messages: [...response.data.messages],
         description: response.data.description,
         title: response.data.title,
-        players: response.data.players,
-        items: response.data.items,
+        players: [...response.data.players],
+        items: [...response.data.items],
         graph
       });
       console.log(response.data);
@@ -139,7 +176,8 @@ class GraphMap extends Component {
       console.dir(error);
       this.setState({
         cooldown: error.response.data.cooldown,
-        messages: [...error.response.data.errors]
+        messages: [...error.response.data.errors],
+        isExploring: false
       });
       throw error;
     }
@@ -167,8 +205,8 @@ class GraphMap extends Component {
           exits: [...res.data.exits],
           description: res.data.description,
           title: res.data.title,
-          players: res.data.players,
-          items: res.data.items,
+          players: [...res.data.players],
+          items: [...res.data.items],
           graph
         }));
         this.updateVisited();
@@ -246,11 +284,11 @@ class GraphMap extends Component {
         coords: this.parseCoords(response.data.coordinates),
         exits: [...response.data.exits],
         cooldown: response.data.cooldown,
-        messages: response.data.messages,
+        messages: [...response.data.messages],
         description: response.data.description,
         title: response.data.title,
-        players: response.data.players,
-        items: response.data.items,
+        players: [...response.data.players],
+        items: [...response.data.items],
         graph
       });
       console.log(response.data);
@@ -271,7 +309,7 @@ class GraphMap extends Component {
       .then(res => {
         console.log(res.data);
         this.setState({ messages: [...res.data.messages] }, () =>
-          this.getStatus()
+          this.wait(1000 * res.data.cooldown).then(() => this.getStatus())
         );
       })
       .catch(err => {
@@ -323,9 +361,9 @@ class GraphMap extends Component {
         console.log(res.data);
         this.setState(
           {
-            messages: res.data.messages,
-            items: res.data.items,
-            players: res.data.players,
+            messages: [...res.data.messages],
+            items: [...res.data.items],
+            players: [...res.data.players],
             cooldown: res.data.cooldown
           },
           () => this.wait(1000 * res.data.cooldown).then(() => this.getStatus())
@@ -335,29 +373,32 @@ class GraphMap extends Component {
       .catch(err => {
         console.log('There was an error.');
         console.dir(err);
+        this.setState({ cooldown: err.response.data.cooldown });
+        throw err;
       });
   };
 
   // AUTOMATED METHODS
   exploreMap = async () => {
-    const { cooldown, graph, room_id, items } = this.state;
-    console.log(cooldown);
+    const { cooldown, graph, isExploring, room_id, items } = this.state;
+
     let exits = [...this.state.exits];
     let random = Math.floor(Math.random() * exits.length);
     let nextRoom = graph[room_id][1][exits[random]];
-
-    if (this.state.encumbrance >= 9) {
-      this.travelToShop()
-        .then(() => this.sellAllTreasure())
-        .then(() => this.exploreMap());
-    } else if (items.length) {
-      this.takeAllTreasures().then(() => this.exploreMap());
-    } else {
-      await this.wait(1000 * cooldown);
-      this.FlyToRooms(exits[random], nextRoom).then(() => {
-        console.log(cooldown);
-        this.exploreMap();
-      });
+    if (isExploring) {
+      if (this.state.encumbrance >= 9) {
+        this.travelToShop()
+          .then(() => this.sellAllTreasure())
+          .then(() => this.exploreMap());
+      } else if (items.length) {
+        this.takeAllTreasures().then(() => this.exploreMap());
+      } else {
+        await this.wait(1000 * cooldown);
+        this.FlyToRooms(exits[random], nextRoom).then(() => {
+          console.log(cooldown);
+          this.exploreMap();
+        });
+      }
     }
   };
 
@@ -372,10 +413,8 @@ class GraphMap extends Component {
 
   takeAllTreasures = async () => {
     const { items, cooldown } = this.state;
-    for (let item of items) {
-      await this.wait(1000 * cooldown);
-      await this.takeTreasure(item);
-    }
+    await this.wait(1000 * cooldown);
+    await this.takeTreasure(items[0]);
     await this.wait(1000 * cooldown);
   };
 
@@ -593,12 +632,34 @@ class GraphMap extends Component {
     }
   };
 
+  travelToNode = async node => {
+    const path = this.findShortestPath(this.state.room_id, node);
+    console.log(path);
+    if (typeof path === 'string') {
+      console.log(path);
+    } else {
+      for (let direction of path) {
+        console.log(direction);
+        for (let d in direction) {
+          await this.wait(1000 * this.state.cooldown);
+          await this.FlyToRooms(d, direction[d]);
+        }
+      }
+    }
+  };
+
   handleClick = () => {
-    // let path = this.findShortestPath(10, 22);
-    // console.log(path);
-    // this.prayToShrine();
-    // this.FlyToRooms('n', 10);
-    this.exploreMap();
+    const { isExploring } = this.state;
+    if (isExploring) {
+      this.setState({
+        isExploring: false,
+        messages: ['Stopped auto exploring.']
+      });
+    } else {
+      this.setState({ isExploring: true }, () =>
+        this.wait(1000 * this.state.cooldown).then(() => this.exploreMap())
+      );
+    }
   };
 
   render() {
@@ -607,12 +668,15 @@ class GraphMap extends Component {
       description,
       encumbrance,
       gold,
+      graph,
       inventory,
+      isExploring,
       items,
       loaded,
       messages,
       name,
       players,
+      progress,
       room_id,
       speed,
       strength,
@@ -622,11 +686,17 @@ class GraphMap extends Component {
       <StyledGraphMap onKeyPress={this.handleKeyPress}>
         {loaded ? (
           <>
-            <Map coords={this.state.allCoords} links={this.state.allLinks} />
+            <Map
+              coords={this.state.allCoords}
+              graph={graph}
+              links={this.state.allLinks}
+              travelToNode={this.travelToNode}
+            />
             <Sidebar
               coords={coords}
               description={description}
               encumbrance={encumbrance}
+              examine={this.examine}
               gold={gold}
               inventory={inventory}
               items={items}
@@ -639,6 +709,7 @@ class GraphMap extends Component {
             />
             <Bottombar
               inventory={inventory}
+              isExploring={isExploring}
               items={items}
               manualMove={this.manualMove}
               messages={messages}
@@ -649,7 +720,7 @@ class GraphMap extends Component {
             />
           </>
         ) : (
-          <Loading />
+          <Loading progress={progress} />
         )}
 
         {/*

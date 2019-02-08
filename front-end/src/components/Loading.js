@@ -2,7 +2,7 @@ import React from 'react';
 import logo from '../images/logo.png';
 import ProgressBar from './ProgressBar';
 
-const Loading = () => {
+const Loading = ({ progress }) => {
   return (
     <div
       style={{
@@ -17,7 +17,7 @@ const Loading = () => {
         alt="Jolly Roger"
         style={{ width: '176px', height: 'auto' }}
       />
-      <ProgressBar />
+      <ProgressBar progress={progress} />
     </div>
   );
 };

@@ -7,9 +7,10 @@ class Button extends Component {
     this.props.onclick();
   };
   render() {
+    const { isExploring } = this.props;
     return (
       <StyledButton className="btn" onClick={this.handleClick}>
-        Explore
+        {isExploring ? 'Exploring...' : 'Explore'}
       </StyledButton>
     );
   }
