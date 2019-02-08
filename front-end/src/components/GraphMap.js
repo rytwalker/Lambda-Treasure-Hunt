@@ -294,10 +294,13 @@ class GraphMap extends Component {
     })
       .then(res => {
         console.log(res.data);
-        this.setState({
-          messages: [...res.data.messages],
-          cooldown: res.data.cooldown
-        });
+        this.setState(
+          {
+            messages: [...res.data.messages],
+            cooldown: res.data.cooldown
+          },
+          () => this.wait(1000 * res.data.cooldown).then(() => this.getStatus())
+        );
       })
       .catch(err => {
         console.log('There was an error.');
@@ -317,6 +320,7 @@ class GraphMap extends Component {
       }
     })
       .then(res => {
+        console.log(res.data);
         this.setState(
           {
             messages: res.data.messages,
@@ -324,11 +328,10 @@ class GraphMap extends Component {
             players: res.data.players,
             cooldown: res.data.cooldown
           },
-          () => this.wait(1000 * res.data.cooldown)
+          () => this.wait(1000 * res.data.cooldown).then(() => this.getStatus())
         );
-        console.log(res.data);
       })
-      .then(() => this.getStatus())
+
       .catch(err => {
         console.log('There was an error.');
         console.dir(err);
@@ -336,8 +339,9 @@ class GraphMap extends Component {
   };
 
   // AUTOMATED METHODS
-  exploreMap = () => {
-    const { graph, room_id, items } = this.state;
+  exploreMap = async () => {
+    const { cooldown, graph, room_id, items } = this.state;
+    console.log(cooldown);
     let exits = [...this.state.exits];
     let random = Math.floor(Math.random() * exits.length);
     let nextRoom = graph[room_id][1][exits[random]];
@@ -346,19 +350,14 @@ class GraphMap extends Component {
       this.travelToShop()
         .then(() => this.sellAllTreasure())
         .then(() => this.exploreMap());
+    } else if (items.length) {
+      this.takeAllTreasures().then(() => this.exploreMap());
     } else {
-      // Move
+      await this.wait(1000 * cooldown);
       this.FlyToRooms(exits[random], nextRoom).then(() => {
-        // Check for items
-        console.log(items.length);
-        if (items.length) {
-          console.log('here');
-          this.takeAllTreasures();
-        }
+        console.log(cooldown);
+        this.exploreMap();
       });
-      // .then(() => {
-      //   setTimeout(this.exploreMap, 1000 * this.state.cooldown);
-      // });
     }
   };
 
@@ -367,17 +366,17 @@ class GraphMap extends Component {
     for (let treasure of inventory) {
       await this.wait(1000 * cooldown);
       await this.sellTreasure(treasure);
-      await this.wait(1000 * cooldown);
-      await this.getStatus();
     }
+    await this.wait(1000 * cooldown);
   };
 
   takeAllTreasures = async () => {
-    const { items } = this.state;
+    const { items, cooldown } = this.state;
     for (let item of items) {
-      await this.wait(1000 * this.state.cooldown);
+      await this.wait(1000 * cooldown);
       await this.takeTreasure(item);
     }
+    await this.wait(1000 * cooldown);
   };
 
   travelToShop = async () => {
